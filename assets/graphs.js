@@ -65,6 +65,8 @@ function makeGraph(elem, opts) {
                     includeZero: opts.includeZero,
                     strokeWidth: opts.strokeWidth,
                     dateWindow: computeDateWindow(),
+                    height: opts.height,
+                    rightGap: 5,
                 });
         }
 
