@@ -2,6 +2,7 @@ const mapDate = value => [new Date(value[0]), value[1]];
 
 function makeGraph(elem, opts) {
     opts.mappers = opts.mappers || [];
+    opts.strokeWidth = opts.strokeWidth || 3.0;
 
     let g;
     let data;
@@ -61,9 +62,9 @@ function makeGraph(elem, opts) {
                     title: opts.title,
                     ylabel: opts.ylabel,
                     labels: ["X", "Y"],
-                    includeZero: true,
+                    includeZero: opts.includeZero,
+                    strokeWidth: opts.strokeWidth,
                     dateWindow: computeDateWindow(),
-                    legend: "always",
                 });
         }
 
