@@ -1,8 +1,14 @@
 const mapDate = value => [new Date(value[0]), value[1]];
 
+
 function makeGraph(elem, opts) {
+    const second = 1000;
+    const minute = second * 60;
+    const hour = second * 24;
+
     opts.mappers = opts.mappers || [];
     opts.strokeWidth = opts.strokeWidth || 3.0;
+    const windowSize = opts.windowSize || 10 * minute; // milliseconds
 
     let g;
     let data;
@@ -13,7 +19,7 @@ function makeGraph(elem, opts) {
         const t1Client = new Date();
         const dt = t1Client.getTime() - t0Client.getTime()
         const t1 = new Date(t0Server.getTime() + dt);
-        const t0 = new Date(t1);
+        const t0 = new Date(t1.getTime() - windowSize);
         t0.setMinutes(t0.getMinutes() - 5);
         return [t0, t1]
     };
@@ -43,10 +49,6 @@ function makeGraph(elem, opts) {
         }
 
         if (msg.initial_data !== undefined) {
-            const t1 = new Date(msg.now);
-            const t0 = new Date(t1);
-            t0.setMinutes(t0.getMinutes() - 5);
-
             data = msg.initial_data.map(mapDate);
             opts.mappers.forEach(mapper => {
                 data = data.map(value => {
