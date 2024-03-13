@@ -1,6 +1,8 @@
 const mapDate = value => [new Date(value[0]), value[1]];
 
 function makeGraph(elem, opts) {
+    opts.mappers = opts.mappers || [];
+
     let g;
     let data;
     let t0Server;
@@ -45,6 +47,12 @@ function makeGraph(elem, opts) {
             t0.setMinutes(t0.getMinutes() - 5);
 
             data = msg.initial_data.map(mapDate);
+            opts.mappers.forEach(mapper => {
+                data = data.map(value => {
+                    return [value[0], mapper(value[1])]
+                })
+            })
+
             g = new Dygraph(// containing div
                 elem,
                 data,
@@ -55,11 +63,19 @@ function makeGraph(elem, opts) {
                     labels: ["X", "Y"],
                     includeZero: true,
                     dateWindow: computeDateWindow(),
+                    legend: "always",
                 });
         }
 
         if (msg.rows !== undefined) {
-            const rows = msg.rows.map(mapDate);
+            let rows = msg.rows.map(mapDate);
+
+            opts.mappers.forEach(mapper => {
+                rows = rows.map(value => {
+                    return [value[0], mapper(value[1])]
+                })
+            })
+
             data.push(...rows);
             g.updateOptions({
                 file: data,
