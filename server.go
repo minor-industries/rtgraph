@@ -2,6 +2,7 @@ package rtgraph
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,7 @@ func (g *Graph) setupServer() error {
 		"dygraph.css", "text/css",
 
 		"graphs.js", "application/javascript",
+		"msgpack.min.js", "application/javascript",
 	)
 
 	r.GET("/ws", func(c *gin.Context) {
@@ -129,7 +131,7 @@ func sendInitialData(
 	}
 
 	fmt.Println(len(binmsg))
-	fmt.Println(len(marshal))
+	fmt.Println(hex.EncodeToString(binmsg))
 
 	//fmt.Println(hex.Dump(binmsg))
 

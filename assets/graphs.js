@@ -27,11 +27,12 @@ function makeGraph(elem, opts) {
     const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
     const ws = new WebSocket(url);
 
-    ws.binaryType = "blob";
+    ws.binaryType = "arraybuffer";
     ws.onmessage = message => {
 
-        if (message.data instanceof Blob) {
-            alert("binary");
+        if (message.data instanceof ArrayBuffer) {
+            let d = msgpack.decode(new Uint8Array(message.data));
+            console.log(d);
             return;
         }
 
