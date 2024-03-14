@@ -104,7 +104,7 @@ func sendInitialData(
 	conn *websocket.Conn,
 	subscribed string,
 ) error {
-	rows, err := graph.GetInitialData(subscribed)
+	rows, data, err := graph.GetInitialData(subscribed)
 	if err != nil {
 		return errors.Wrap(err, "get initial data")
 	}
@@ -123,7 +123,17 @@ func sendInitialData(
 		return errors.Wrap(err, "write")
 	}
 
-	if err := conn.Write(ctx, websocket.MessageBinary, []byte("abc123")); err != nil {
+	binmsg, err := data.MarshalMsg(nil)
+	if err != nil {
+		return errors.Wrap(err, "marshal msg")
+	}
+
+	fmt.Println(len(binmsg))
+	fmt.Println(len(marshal))
+
+	//fmt.Println(hex.Dump(binmsg))
+
+	if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
 		return errors.Wrap(err, "write binary")
 	}
 

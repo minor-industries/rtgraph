@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/platform/common/broker"
 	"github.com/minor-industries/rtgraph/database"
+	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
@@ -93,15 +94,23 @@ func (g *Graph) CreateValue(
 	return nil
 }
 
-func (g *Graph) GetInitialData(subscribed string) ([][2]any, error) {
+func floatP(v float32) *float32 {
+	return &v
+}
+
+func (g *Graph) GetInitialData(subscribed string) (
+	[][2]any,
+	*messages.Data,
+	error,
+) {
 	s, ok := g.allSeries[subscribed]
 	if !ok {
-		return nil, errors.New("unknown series")
+		return nil, nil, errors.New("unknown series")
 	}
 
 	data, err := database.LoadData(g.db, s.ID)
 	if err != nil {
-		return nil, errors.Wrap(err, "load data")
+		return nil, nil, errors.Wrap(err, "load data")
 	}
 
 	rows := [][2]any{}
@@ -113,7 +122,15 @@ func (g *Graph) GetInitialData(subscribed string) ([][2]any, error) {
 		})
 	}
 
-	return rows, nil
+	newData := &messages.Data{Rows: []any{}}
+	for _, d := range data {
+		newData.Rows = append(newData.Rows, []any{
+			d.Timestamp.UnixMilli(),
+			floatP(float32(d.Value)),
+		})
+	}
+
+	return rows, newData, nil
 }
 
 func (g *Graph) Subscribe(
