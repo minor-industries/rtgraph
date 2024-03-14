@@ -26,7 +26,15 @@ function makeGraph(elem, opts) {
 
     const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
     const ws = new WebSocket(url);
+
+    ws.binaryType = "blob";
     ws.onmessage = message => {
+
+        if (message.data instanceof Blob) {
+            alert("binary");
+            return;
+        }
+
         const msg = JSON.parse(message.data);
 
         if (msg.error !== undefined) {
