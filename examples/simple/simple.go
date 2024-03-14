@@ -2,8 +2,11 @@ package main
 
 import (
 	"github.com/minor-industries/rtgraph"
+	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
+	"math/rand"
 	"os"
+	"time"
 )
 
 func run() error {
@@ -13,25 +16,25 @@ func run() error {
 		os.ExpandEnv("$HOME/rtgraph-simple.db"),
 		errCh,
 		[]string{
-			"bike_instant_speed",
-			"bike_instant_cadence",
-			"bike_total_distance",
-			"bike_resistance_level",
-			"bike_instant_power",
-			"bike_total_energy",
-			"bike_energy_per_hour",
-			"bike_energy_per_minute",
-			"bike_heartrate",
-
-			"rower_stroke_count",
-			"rower_power",
-			"rower_speed",
-			"rower_spm",
+			"sample",
 		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "new graph")
 	}
+
+	graph.StaticFiles(html.FS, "index.html", "text/html")
+
+	go func() {
+		ticker := time.NewTicker(1000 * time.Millisecond)
+		for range ticker.C {
+			err := graph.CreateValue("sample", time.Now(), rand.Float64())
+			if err != nil {
+				errCh <- errors.Wrap(err, "create value")
+				return
+			}
+		}
+	}()
 
 	go func() {
 		errCh <- graph.RunServer("0.0.0.0:8000")

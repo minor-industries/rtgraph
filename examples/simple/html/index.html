@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BBQueue</title>
+
+    <style>
+        .wide {
+            width: 97.5%;
+            margin-bottom: 10px;
+        }
+    </style>
+
+    <script type="text/javascript" src="dygraph.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="dygraph.css"/>
+    <script type="text/javascript" src="graphs.js"></script>
+    <script type="text/javascript">
+        const minute = 1000 * 60;
+
+        Dygraph.onDOMready(function onDOMready() {
+            makeGraph(document.getElementById("graphdiv0"), {
+                series: "sample",
+                title: "Sample Series",
+                height: 300,
+                windowSize: minute,
+            });
+        });
+    </script>
+</head>
+<body>
+
+<div id="graphdiv0" class="wide"></div>
+
+</body>
+</html>
