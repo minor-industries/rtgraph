@@ -127,7 +127,6 @@ func (g *Graph) Subscribe(
 		switch m := msg.(type) {
 		case *schema.Series:
 			if m.SeriesName == subscribed {
-				fmt.Println("tick", m.SeriesName, m.Timestamp, m.Value)
 				newRows := [][2]any{{
 					m.Timestamp.UnixMilli(),
 					m.Value,
