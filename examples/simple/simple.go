@@ -4,16 +4,27 @@ import (
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
+	"io/fs"
 	"math/rand"
 	"os"
+	"syscall"
 	"time"
 )
 
 func run() error {
 	errCh := make(chan error)
 
+	db := os.ExpandEnv("$HOME/rtgraph-simple.db")
+	if err := os.Remove(db); err != nil {
+		var pathError *fs.PathError
+		ok := errors.As(err, &pathError) && pathError.Err == syscall.ENOENT
+		if !ok {
+			return errors.Wrap(err, "remove db")
+		}
+	}
+
 	graph, err := rtgraph.New(
-		os.ExpandEnv("$HOME/rtgraph-simple.db"),
+		db,
 		errCh,
 		[]string{
 			"sample",
