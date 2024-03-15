@@ -9,6 +9,7 @@ import (
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"math"
 	"time"
 )
 
@@ -112,8 +113,17 @@ func (g *Graph) GetInitialData(subscribed string) (
 		return nil, errors.Wrap(err, "load data")
 	}
 
+	var t0 time.Time
 	newData := &messages.Data{Rows: []any{}}
-	for _, d := range data {
+	for idx, d := range data {
+		if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
+			newData.Rows = append(newData.Rows, []any{
+				d.Timestamp.UnixMilli(),
+				floatP(float32(math.NaN())),
+			})
+		}
+		t0 = d.Timestamp
+
 		newData.Rows = append(newData.Rows, []any{
 			d.Timestamp.UnixMilli(),
 			floatP(float32(d.Value)),

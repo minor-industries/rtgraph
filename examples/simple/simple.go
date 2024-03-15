@@ -28,6 +28,10 @@ func run() error {
 	go func() {
 		ticker := time.NewTicker(1000 * time.Millisecond)
 		for range ticker.C {
+			if rand.Float64() < 0.05 {
+				continue
+			}
+
 			err := graph.CreateValue("sample", time.Now(), rand.Float64())
 			if err != nil {
 				errCh <- errors.Wrap(err, "create value")
