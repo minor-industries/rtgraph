@@ -63,7 +63,8 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		subscribed := req["series"].(string)
+		reqSeries := req["series"].([]any)
+		subscribed := reqSeries[0].(string)
 
 		if err := sendInitialData(
 			ctx,
