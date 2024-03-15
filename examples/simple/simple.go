@@ -27,7 +27,8 @@ func run() error {
 		db,
 		errCh,
 		[]string{
-			"sample",
+			"sample1",
+			"sample2",
 		},
 	)
 	if err != nil {
@@ -43,7 +44,7 @@ func run() error {
 				continue
 			}
 
-			err := graph.CreateValue("sample", time.Now(), rand.Float64())
+			err := graph.CreateValue("sample1", time.Now(), rand.Float64())
 			if err != nil {
 				errCh <- errors.Wrap(err, "create value")
 				return

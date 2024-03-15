@@ -70,7 +70,7 @@ func (g *Graph) setupServer() error {
 			ctx,
 			g,
 			conn,
-			subscribed,
+			[]string{subscribed},
 		); err != nil {
 			err := errors.Wrap(err, "send initial data")
 			fmt.Println("error", err.Error())
@@ -104,7 +104,7 @@ func sendInitialData(
 	ctx context.Context,
 	graph *Graph,
 	conn *websocket.Conn,
-	subscribed string,
+	subscribed []string,
 ) error {
 	data, err := graph.GetInitialData(subscribed)
 	if err != nil {

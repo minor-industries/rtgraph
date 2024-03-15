@@ -85,10 +85,10 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 	return typeMap, nil
 }
 
-func LoadData(db *gorm.DB, series []byte) ([]Value, error) {
+func LoadData(db *gorm.DB, series [][]byte) ([]Value, error) {
 	var result []Value
 
-	tx := db.Where("series_id = ?", series).Order("timestamp asc").Find(&result)
+	tx := db.Where("series_id IN ?", series).Order("timestamp asc").Find(&result)
 	if tx.Error != nil {
 		return nil, errors.Wrap(tx.Error, "find")
 	}

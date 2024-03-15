@@ -99,16 +99,20 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) GetInitialData(subscribed string) (
+func (g *Graph) GetInitialData(subscribed []string) (
 	*messages.Data,
 	error,
 ) {
-	s, ok := g.allSeries[subscribed]
-	if !ok {
-		return nil, errors.New("unknown series")
+	var ids [][]byte
+	for _, sub := range subscribed {
+		s, ok := g.allSeries[sub]
+		if !ok {
+			return nil, errors.New("unknown series")
+		}
+		ids = append(ids, s.ID)
 	}
 
-	data, err := database.LoadData(g.db, s.ID)
+	data, err := database.LoadData(g.db, ids)
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
 	}
