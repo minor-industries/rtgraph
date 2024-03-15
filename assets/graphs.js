@@ -1,4 +1,4 @@
-const mapDate = value => [new Date(value[0]), value[1], value[2]];
+const mapDate = ([first, ...rest]) => [new Date(first), ...rest];
 
 
 function makeGraph(elem, opts) {
@@ -28,8 +28,13 @@ function makeGraph(elem, opts) {
     function make(rows) {
         data = rows.map(mapDate);
         opts.mappers.forEach(mapper => {
-            data = data.map(value => {
-                return [value[0], mapper(value[1]), mapper(value[2])]
+            data = data.map(([first, ...rest]) => {
+                return [first, ...rest.map(x => {
+                    if (x === null || isNaN(x)) {
+                        return x;
+                    }
+                    return mapper(x);
+                })]
             })
         })
 
@@ -74,14 +79,14 @@ function makeGraph(elem, opts) {
             // handle case when client and server times don't match
             t0Server = new Date(msg.now);
             t0Client = new Date();
-            setInterval(function () {
-                if (g === undefined) {
-                    return;
-                }
-                g.updateOptions({
-                    dateWindow: computeDateWindow(),
-                })
-            }, 250);
+            // setInterval(function () {
+            //     if (g === undefined) {
+            //         return;
+            //     }
+            //     g.updateOptions({
+            //         dateWindow: computeDateWindow(),
+            //     })
+            // }, 250);
         }
 
         // if (msg.initial_data !== undefined) {
