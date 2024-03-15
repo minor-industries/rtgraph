@@ -1,4 +1,4 @@
-const mapDate = value => [new Date(value[0]), value[1]];
+const mapDate = value => [new Date(value[0]), value[1], value[2]];
 
 
 function makeGraph(elem, opts) {
@@ -29,7 +29,7 @@ function makeGraph(elem, opts) {
         data = rows.map(mapDate);
         opts.mappers.forEach(mapper => {
             data = data.map(value => {
-                return [value[0], mapper(value[1])]
+                return [value[0], mapper(value[1]), mapper(value[2])]
             })
         })
 
@@ -40,12 +40,13 @@ function makeGraph(elem, opts) {
                 // dateWindow: [t0, t1],
                 title: opts.title,
                 ylabel: opts.ylabel,
-                labels: ["X", "Y"],
+                labels: ["x", "Y1", "Y2"],
                 includeZero: opts.includeZero,
                 strokeWidth: opts.strokeWidth,
                 dateWindow: computeDateWindow(),
                 height: opts.height,
                 rightGap: 5,
+                connectSeparatedPoints: true
             });
     }
 
@@ -57,6 +58,7 @@ function makeGraph(elem, opts) {
 
         if (message.data instanceof ArrayBuffer) {
             let d = msgpack.decode(new Uint8Array(message.data));
+            console.log(d.rows);
             make(d.rows);
             return;
         }
@@ -87,6 +89,7 @@ function makeGraph(elem, opts) {
         // }
 
         if (msg.rows !== undefined) {
+            return;
             let rows = msg.rows.map(mapDate);
 
             opts.mappers.forEach(mapper => {
