@@ -63,14 +63,16 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		reqSeries := req["series"].([]any)
-		subscribed := reqSeries[0].(string)
+		var subscribed []string
+		for _, s := range req["series"].([]any) {
+			subscribed = append(subscribed, s.(string))
+		}
 
 		if err := sendInitialData(
 			ctx,
 			g,
 			conn,
-			[]string{subscribed},
+			subscribed,
 		); err != nil {
 			err := errors.Wrap(err, "send initial data")
 			fmt.Println("error", err.Error())
@@ -80,7 +82,7 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		g.Subscribe(subscribed, func(obj any) error {
+		g.Subscribe(subscribed[0], func(obj any) error {
 			if err := wsjson.Write(ctx, conn, obj); err != nil {
 				return errors.Wrap(err, "write websocket")
 			}
