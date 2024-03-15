@@ -2,7 +2,6 @@ package rtgraph
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -106,7 +105,7 @@ func sendInitialData(
 	conn *websocket.Conn,
 	subscribed string,
 ) error {
-	rows, data, err := graph.GetInitialData(subscribed)
+	data, err := graph.GetInitialData(subscribed)
 	if err != nil {
 		return errors.Wrap(err, "get initial data")
 	}
@@ -117,23 +116,10 @@ func sendInitialData(
 		return errors.Wrap(err, "write timestamp")
 	}
 
-	marshal, _ := json.Marshal(map[string]any{
-		"initial_data": rows,
-	})
-
-	if err := conn.Write(ctx, websocket.MessageText, marshal); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
 	binmsg, err := data.MarshalMsg(nil)
 	if err != nil {
 		return errors.Wrap(err, "marshal msg")
 	}
-
-	fmt.Println(len(binmsg))
-	fmt.Println(hex.EncodeToString(binmsg))
-
-	//fmt.Println(hex.Dump(binmsg))
 
 	if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
 		return errors.Wrap(err, "write binary")

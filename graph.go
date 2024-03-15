@@ -99,27 +99,17 @@ func floatP(v float32) *float32 {
 }
 
 func (g *Graph) GetInitialData(subscribed string) (
-	[][2]any,
 	*messages.Data,
 	error,
 ) {
 	s, ok := g.allSeries[subscribed]
 	if !ok {
-		return nil, nil, errors.New("unknown series")
+		return nil, errors.New("unknown series")
 	}
 
 	data, err := database.LoadData(g.db, s.ID)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "load data")
-	}
-
-	rows := [][2]any{}
-	for _, d := range data {
-		// TODO: NaNs for gaps
-		rows = append(rows, [2]any{
-			d.Timestamp.UnixMilli(),
-			d.Value,
-		})
+		return nil, errors.Wrap(err, "load data")
 	}
 
 	newData := &messages.Data{Rows: []any{}}
@@ -130,7 +120,7 @@ func (g *Graph) GetInitialData(subscribed string) (
 		})
 	}
 
-	return rows, newData, nil
+	return newData, nil
 }
 
 func (g *Graph) Subscribe(

@@ -24,15 +24,40 @@ function makeGraph(elem, opts) {
         return [t0, t1]
     };
 
+
+    function make(rows) {
+        data = rows.map(mapDate);
+        opts.mappers.forEach(mapper => {
+            data = data.map(value => {
+                return [value[0], mapper(value[1])]
+            })
+        })
+
+        g = new Dygraph(// containing div
+            elem,
+            data,
+            {
+                // dateWindow: [t0, t1],
+                title: opts.title,
+                ylabel: opts.ylabel,
+                labels: ["X", "Y"],
+                includeZero: opts.includeZero,
+                strokeWidth: opts.strokeWidth,
+                dateWindow: computeDateWindow(),
+                height: opts.height,
+                rightGap: 5,
+            });
+    }
+
     const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
     const ws = new WebSocket(url);
-
     ws.binaryType = "arraybuffer";
+
     ws.onmessage = message => {
 
         if (message.data instanceof ArrayBuffer) {
             let d = msgpack.decode(new Uint8Array(message.data));
-            console.log(d);
+            make(d.rows);
             return;
         }
 
@@ -57,29 +82,9 @@ function makeGraph(elem, opts) {
             }, 250);
         }
 
-        if (msg.initial_data !== undefined) {
-            data = msg.initial_data.map(mapDate);
-            opts.mappers.forEach(mapper => {
-                data = data.map(value => {
-                    return [value[0], mapper(value[1])]
-                })
-            })
-
-            g = new Dygraph(// containing div
-                elem,
-                data,
-                {
-                    // dateWindow: [t0, t1],
-                    title: opts.title,
-                    ylabel: opts.ylabel,
-                    labels: ["X", "Y"],
-                    includeZero: opts.includeZero,
-                    strokeWidth: opts.strokeWidth,
-                    dateWindow: computeDateWindow(),
-                    height: opts.height,
-                    rightGap: 5,
-                });
-        }
+        // if (msg.initial_data !== undefined) {
+        //     make(msg.initial_data);
+        // }
 
         if (msg.rows !== undefined) {
             let rows = msg.rows.map(mapDate);
