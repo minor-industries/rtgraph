@@ -20,7 +20,6 @@ function makeGraph(elem, opts) {
         const dt = t1Client.getTime() - t0Client.getTime()
         const t1 = new Date(t0Server.getTime() + dt);
         const t0 = new Date(t1.getTime() - windowSize);
-        t0.setMinutes(t0.getMinutes() - 5);
         return [t0, t1]
     };
 
@@ -79,14 +78,14 @@ function makeGraph(elem, opts) {
             // handle case when client and server times don't match
             t0Server = new Date(msg.now);
             t0Client = new Date();
-            // setInterval(function () {
-            //     if (g === undefined) {
-            //         return;
-            //     }
-            //     g.updateOptions({
-            //         dateWindow: computeDateWindow(),
-            //     })
-            // }, 250);
+            setInterval(function () {
+                if (g === undefined) {
+                    return;
+                }
+                g.updateOptions({
+                    dateWindow: computeDateWindow(),
+                })
+            }, 250);
         }
 
         // if (msg.initial_data !== undefined) {
