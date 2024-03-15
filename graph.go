@@ -9,7 +9,6 @@ import (
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"math"
 	"time"
 )
 
@@ -103,12 +102,15 @@ func (g *Graph) GetInitialData(subscribed []string) (
 	*messages.Data,
 	error,
 ) {
+	positions := map[string]int{}
+
 	var ids [][]byte
-	for _, sub := range subscribed {
+	for idx, sub := range subscribed {
 		s, ok := g.allSeries[sub]
 		if !ok {
 			return nil, errors.New("unknown series")
 		}
+		positions[string(s.ID)] = idx + 1
 		ids = append(ids, s.ID)
 	}
 
@@ -117,24 +119,35 @@ func (g *Graph) GetInitialData(subscribed []string) (
 		return nil, errors.Wrap(err, "load data")
 	}
 
-	var t0 time.Time
-	newData := &messages.Data{Rows: []any{}}
-	for idx, d := range data {
-		if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
-			newData.Rows = append(newData.Rows, []any{
-				d.Timestamp.UnixMilli(),
-				floatP(float32(math.NaN())),
-			})
-		}
-		t0 = d.Timestamp
+	//var t0 time.Time
+	result := &messages.Data{Rows: []any{}}
+	for _, d := range data {
+		//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
+		//	result.Rows = append(result.Rows, []any{
+		//		d.Timestamp.UnixMilli(),
+		//		floatP(float32(math.NaN())),
+		//	})
+		//}
+		//t0 = d.Timestamp
 
-		newData.Rows = append(newData.Rows, []any{
-			d.Timestamp.UnixMilli(),
-			floatP(float32(d.Value)),
-		})
+		row := make([]any, len(subscribed)+1)
+		row[0] = d.Timestamp.UnixMilli()
+
+		// first fill with nils
+		for i := 0; i < len(subscribed); i++ {
+			row[i+1] = nil
+		}
+
+		pos, ok := positions[string(d.SeriesID)]
+		if !ok {
+			return nil, fmt.Errorf("found value %s with unknown series", d.Series.Name)
+		}
+		row[pos] = floatP(float32(d.Value))
+
+		result.Rows = append(result.Rows, row)
 	}
 
-	return newData, nil
+	return result, nil
 }
 
 func (g *Graph) Subscribe(

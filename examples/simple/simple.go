@@ -53,6 +53,21 @@ func run() error {
 	}()
 
 	go func() {
+		ticker := time.NewTicker(1500 * time.Millisecond)
+		for range ticker.C {
+			if rand.Float64() < 0.05 {
+				continue
+			}
+
+			err := graph.CreateValue("sample2", time.Now(), -rand.Float64())
+			if err != nil {
+				errCh <- errors.Wrap(err, "create value")
+				return
+			}
+		}
+	}()
+
+	go func() {
 		errCh <- graph.RunServer("0.0.0.0:8000")
 	}()
 

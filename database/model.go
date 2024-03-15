@@ -1,6 +1,8 @@
 package database
 
-import "time"
+import (
+	"time"
+)
 
 type Value struct {
 	ID        []byte    `gorm:"primary_key"`
