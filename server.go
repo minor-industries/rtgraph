@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/assets"
 	"github.com/minor-industries/rtgraph/messages"
@@ -83,7 +84,7 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		g.Subscribe(subscribed[0], func(data *messages.Data) error {
+		g.Subscribe(set.FromSlice(subscribed), func(data *messages.Data) error {
 			binmsg, err := data.MarshalMsg(nil)
 			if err != nil {
 				return errors.Wrap(err, "marshal msg")

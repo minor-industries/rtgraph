@@ -3,6 +3,7 @@ package rtgraph
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/platform/common/broker"
 	"github.com/minor-industries/rtgraph/database"
@@ -168,7 +169,7 @@ func (g *Graph) packRow(
 }
 
 func (g *Graph) Subscribe(
-	subscribed string,
+	subscribed set.Set[string],
 	callback func(data *messages.Data) error,
 ) {
 	msgCh := g.broker.Subscribe()
@@ -177,7 +178,7 @@ func (g *Graph) Subscribe(
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			if m.SeriesName == subscribed {
+			if subscribed.Has(m.SeriesName) {
 				row, err := g.packRow(database.HashedID(m.SeriesName), m.Timestamp, m.Value)
 				if err != nil {
 					panic(err) // TODO
