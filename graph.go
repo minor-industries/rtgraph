@@ -22,9 +22,12 @@ type Graph struct {
 	broker    *broker.Broker
 	allSeries map[string]*database.Series
 	server    *gin.Engine
+}
 
-	positions  map[string]int
-	subscribed []string
+type subscription struct {
+	series    []string
+	ids       [][]byte
+	positions map[string]int
 }
 
 func New(
@@ -103,32 +106,41 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) GetInitialData(subscribed_ []string) (
-	*messages.Data,
-	error,
-) {
-	g.subscribed = subscribed_
-	g.positions = map[string]int{}
+func (g *Graph) getPositionsAndIDs(subscribed []string) (*subscription, error) {
+	positions := map[string]int{}
 
 	var ids [][]byte
-	for idx, sub := range g.subscribed {
+	for idx, sub := range subscribed {
 		s, ok := g.allSeries[sub]
 		if !ok {
 			return nil, errors.New("unknown series")
 		}
-		g.positions[string(s.ID)] = idx + 1
+		positions[string(s.ID)] = idx + 1
 		ids = append(ids, s.ID)
 	}
 
-	data, err := database.LoadData(g.db, ids)
+	return &subscription{
+		series:    subscribed,
+		ids:       ids,
+		positions: positions,
+	}, nil
+}
+
+func (g *Graph) getInitialData(sub *subscription) (*messages.Data, error) {
+	data, err := database.LoadData(g.db, sub.ids)
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
+	}
+
+	fmt.Println(sub.series)
+	for s, i := range sub.positions {
+		fmt.Println(hex.EncodeToString([]byte(s)), i)
 	}
 
 	//var t0 time.Time
 	result := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		row, err := g.packRow(d.SeriesID, d.Timestamp, d.Value)
+		row, err := g.packRow(sub, d.SeriesID, d.Timestamp, d.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -140,6 +152,7 @@ func (g *Graph) GetInitialData(subscribed_ []string) (
 }
 
 func (g *Graph) packRow(
+	sub *subscription,
 	seriesID []byte,
 	timestamp time.Time,
 	value float64,
@@ -152,15 +165,15 @@ func (g *Graph) packRow(
 	//}
 	//t0 = d.Timestamp
 
-	row := make([]any, len(g.subscribed)+1)
+	row := make([]any, len(sub.series)+1)
 	row[0] = timestamp.UnixMilli()
 
 	// first fill with nils
-	for i := 0; i < len(g.subscribed); i++ {
+	for i := 0; i < len(sub.series); i++ {
 		row[i+1] = nil
 	}
 
-	pos, ok := g.positions[string(seriesID)]
+	pos, ok := sub.positions[string(seriesID)]
 	if !ok {
 		return nil, fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
 	}
@@ -169,17 +182,39 @@ func (g *Graph) packRow(
 }
 
 func (g *Graph) Subscribe(
-	subscribed set.Set[string],
+	series []string,
 	callback func(data *messages.Data) error,
 ) {
+	sub, err := g.getPositionsAndIDs(series)
+	if err != nil {
+		panic(err) // TODO: return error to ws client and maybe log. Need to gerate a msgpack message with an error field
+	}
+
+	initialData, err := g.getInitialData(sub)
+	if err != nil {
+		panic(err) // TODO: return error to ws client and maybe log. Need to gerate a msgpack message with an error field
+	}
+
+	err = callback(initialData)
+	if err != nil {
+		fmt.Println(errors.Wrap(err, "callback error"))
+		return
+	}
+
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
+	allSeries := set.FromSlice(sub.series)
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			if subscribed.Has(m.SeriesName) {
-				row, err := g.packRow(database.HashedID(m.SeriesName), m.Timestamp, m.Value)
+			if allSeries.Has(m.SeriesName) {
+				row, err := g.packRow(
+					sub,
+					database.HashedID(m.SeriesName),
+					m.Timestamp,
+					m.Value,
+				)
 				if err != nil {
 					panic(err) // TODO
 				}

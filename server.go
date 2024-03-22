@@ -1,10 +1,8 @@
 package rtgraph
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/assets"
 	"github.com/minor-industries/rtgraph/messages"
@@ -58,33 +56,28 @@ func (g *Graph) setupServer() error {
 		}
 		conn.CloseRead(ctx)
 
-		var req map[string]any
+		type reqT struct {
+			Series []string `json:"series"`
+		}
+
+		var req reqT
 		err = json.Unmarshal(reqBytes, &req)
 		if wsErr != nil {
 			fmt.Println("ws error", errors.Wrap(err, "unmarshal json"))
 			return
 		}
 
-		var subscribed []string
-		for _, s := range req["series"].([]any) {
-			subscribed = append(subscribed, s.(string))
-		}
+		fmt.Println("req", req)
 
-		if err := sendInitialData(
-			ctx,
-			g,
-			conn,
-			subscribed,
-		); err != nil {
-			err := errors.Wrap(err, "send initial data")
-			fmt.Println("error", err.Error())
-			_ = wsjson.Write(ctx, conn, map[string]any{
-				"error": err.Error(),
-			})
+		now := time.Now()
+		if err := wsjson.Write(ctx, conn, map[string]any{
+			"now": now.UnixMilli(),
+		}); err != nil {
+			fmt.Println(errors.Wrap(err, "write timestamp"))
 			return
 		}
 
-		g.Subscribe(set.FromSlice(subscribed), func(data *messages.Data) error {
+		g.Subscribe(req.Series, func(data *messages.Data) error {
 			binmsg, err := data.MarshalMsg(nil)
 			if err != nil {
 				return errors.Wrap(err, "marshal msg")
@@ -107,36 +100,6 @@ func (g *Graph) RunServer(address string) error {
 	if err := g.server.Run(address); err != nil {
 		return errors.Wrap(err, "run")
 	}
-	return nil
-}
-
-func sendInitialData(
-	ctx context.Context,
-	graph *Graph,
-	conn *websocket.Conn,
-	subscribed []string,
-) error {
-	now := time.Now()
-	if err := wsjson.Write(ctx, conn, map[string]any{
-		"now": now.UnixMilli(),
-	}); err != nil {
-		return errors.Wrap(err, "write timestamp")
-	}
-
-	data, err := graph.GetInitialData(subscribed)
-	if err != nil {
-		return errors.Wrap(err, "get initial data")
-	}
-
-	binmsg, err := data.MarshalMsg(nil)
-	if err != nil {
-		return errors.Wrap(err, "marshal msg")
-	}
-
-	if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
-		return errors.Wrap(err, "write binary")
-	}
-
 	return nil
 }
 
