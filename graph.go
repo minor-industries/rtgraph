@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
-	"github.com/minor-industries/platform/common/broker"
+	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
@@ -77,6 +77,7 @@ func New(
 	go g.computeDerivedSeries(computed)
 	go g.dbWriter()
 	go br.Start()
+	//go g.monitorDrops()
 
 	return g, nil
 }
@@ -228,5 +229,13 @@ func (g *Graph) Subscribe(
 				}
 			}
 		}
+	}
+}
+
+func (g *Graph) monitorDrops() {
+	ticker := time.NewTicker(time.Second)
+
+	for range ticker.C {
+		fmt.Println("drops", g.broker.DropCount())
 	}
 }
