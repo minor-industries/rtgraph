@@ -67,8 +67,6 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		fmt.Println("req", req)
-
 		now := time.Now()
 		if err := wsjson.Write(ctx, conn, map[string]any{
 			"now": now.UnixMilli(),

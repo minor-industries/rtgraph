@@ -126,11 +126,6 @@ func (g *Graph) getInitialData(sub *subscription) (*messages.Data, error) {
 		return nil, errors.Wrap(err, "load data")
 	}
 
-	fmt.Println(sub.series)
-	for s, i := range sub.positions {
-		fmt.Println(hex.EncodeToString([]byte(s)), i)
-	}
-
 	//var t0 time.Time
 	result := &messages.Data{Rows: []any{}}
 	for _, d := range data {
@@ -237,7 +232,6 @@ func (g *Graph) computeDerivedSeries() {
 				removeOld(values, m.Timestamp.Add(-30*time.Second))
 				avg, ok := computeAvg(values)
 				if ok {
-					fmt.Println("avg", avg)
 					seriesName := m.SeriesName + "_avg_30s"
 					g.broker.Publish(&schema.Series{
 						SeriesName: seriesName,
@@ -264,7 +258,6 @@ func (g *Graph) dbWriter() {
 		case msg := <-msgCh:
 			switch m := msg.(type) {
 			case *schema.Series:
-				fmt.Println(m.SeriesName, hex.EncodeToString(m.SeriesID))
 				values = append(values, database.Value{
 					ID:        database.RandomID(),
 					Timestamp: m.Timestamp,
@@ -293,7 +286,6 @@ func removeOld(values *list.List, cutoff time.Time) {
 		e := values.Front()
 		v := e.Value.(*schema.Series)
 		if v.Timestamp.Before(cutoff) {
-			fmt.Println("remove", v.Timestamp)
 			values.Remove(e)
 		} else {
 			break
@@ -309,8 +301,6 @@ func computeAvg(values *list.List) (float64, bool) {
 		sum += v.Value
 		count++
 	}
-
-	fmt.Println(count)
 
 	if count > 0 {
 		return sum / float64(count), true
