@@ -30,14 +30,29 @@ type subscription struct {
 	positions map[string]int
 }
 
+type Computed struct {
+	SeriesName string
+	Function   string
+	Seconds    int
+}
+
+func (c *Computed) Name() string {
+	return fmt.Sprintf("%s_%s_%ds", c.SeriesName, c.Function, c.Seconds)
+}
+
 func New(
 	dbPath string,
 	errCh chan error,
 	seriesNames []string,
+	computed []Computed,
 ) (*Graph, error) {
 	db, err := database.Get(dbPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "get database")
+	}
+
+	for _, c := range computed {
+		seriesNames = append(seriesNames, c.Name())
 	}
 
 	allSeries, err := database.LoadAllSeries(db, seriesNames)
@@ -59,7 +74,7 @@ func New(
 	}
 
 	go g.publishPrometheusMetrics()
-	go g.computeDerivedSeries()
+	go g.computeDerivedSeries(computed)
 	go g.dbWriter()
 	go br.Start()
 

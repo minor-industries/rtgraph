@@ -29,8 +29,18 @@ func run() error {
 		[]string{
 			"sample1",
 			"sample2",
-
-			"sample1_avg_30s",
+		},
+		[]rtgraph.Computed{
+			{
+				SeriesName: "sample1",
+				Function:   "avg",
+				Seconds:    30,
+			},
+			{
+				SeriesName: "sample2",
+				Function:   "avg",
+				Seconds:    90,
+			},
 		},
 	)
 	if err != nil {

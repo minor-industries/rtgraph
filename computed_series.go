@@ -2,27 +2,40 @@ package rtgraph
 
 import (
 	"container/list"
+	"fmt"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
 	"time"
 )
 
-func (g *Graph) computeDerivedSeries() {
+func (g *Graph) computeDerivedSeries(computed []Computed) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
 	values := list.New()
 
+	computedMap := map[string]Computed{}
+	for _, c := range computed {
+		computedMap[c.SeriesName] = c
+	}
+
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			switch m.SeriesName {
-			case "sample1":
-				values.PushBack(m)
-				removeOld(values, m.Timestamp.Add(-30*time.Second))
+			c, ok := computedMap[m.SeriesName]
+			if !ok {
+				continue
+			}
+
+			values.PushBack(m)
+			dt := -time.Duration(c.Seconds) * time.Second
+			removeOld(values, m.Timestamp.Add(dt))
+
+			switch c.Function {
+			case "avg":
 				avg, ok := computeAvg(values)
 				if ok {
-					seriesName := m.SeriesName + "_avg_30s"
+					seriesName := c.Name()
 					g.broker.Publish(&schema.Series{
 						SeriesName: seriesName,
 						Timestamp:  m.Timestamp,
@@ -30,6 +43,8 @@ func (g *Graph) computeDerivedSeries() {
 						SeriesID:   database.HashedID(seriesName),
 					})
 				}
+			default:
+				panic(fmt.Errorf("unknown function %s", c.Function))
 			}
 		}
 	}
