@@ -44,7 +44,7 @@ function makeGraph(elem, opts) {
                 // dateWindow: [t0, t1],
                 title: opts.title,
                 ylabel: opts.ylabel,
-                labels: ["x", "Y1", "Y2"],
+                labels: opts.labels,
                 includeZero: opts.includeZero,
                 strokeWidth: opts.strokeWidth,
                 dateWindow: computeDateWindow(),
