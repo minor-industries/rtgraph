@@ -6,6 +6,10 @@ function makeGraph(elem, opts) {
     const minute = second * 60;
     const hour = second * 24;
 
+    if (opts.labels === undefined || opts.labels === null) {
+        throw new Error("labels not given");
+    }
+
     opts.mappers = opts.mappers || [];
     opts.strokeWidth = opts.strokeWidth || 3.0;
     const windowSize = opts.windowSize || 10 * minute; // milliseconds

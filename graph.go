@@ -187,12 +187,12 @@ func (g *Graph) Subscribe(
 ) {
 	sub, err := g.getPositionsAndIDs(series)
 	if err != nil {
-		panic(err) // TODO: return error to ws client and maybe log. Need to gerate a msgpack message with an error field
+		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
 
 	initialData, err := g.getInitialData(sub)
 	if err != nil {
-		panic(err) // TODO: return error to ws client and maybe log. Need to gerate a msgpack message with an error field
+		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
 
 	err = callback(initialData)
