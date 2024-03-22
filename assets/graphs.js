@@ -60,7 +60,8 @@ function makeGraph(elem, opts) {
                     dateWindow: computeDateWindow(),
                     height: opts.height,
                     rightGap: 5,
-                    connectSeparatedPoints: true
+                    connectSeparatedPoints: true,
+                    valueRange: opts.valueRange
                 });
         } else {
             g.updateOptions({
