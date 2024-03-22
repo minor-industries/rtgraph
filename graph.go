@@ -59,9 +59,10 @@ func New(
 		return nil, errors.Wrap(err, "setup server")
 	}
 
-	go br.Start()
 	go g.publishPrometheusMetrics()
 	go g.computeDerivedSeries()
+	go g.dbWriter()
+	go br.Start()
 
 	return g, nil
 }
@@ -85,20 +86,11 @@ func (g *Graph) CreateValue(
 		return fmt.Errorf("unknown database series: %s", seriesName)
 	}
 
-	tx := g.db.Create(&database.Value{
-		ID:        database.RandomID(),
-		Timestamp: timestamp,
-		Value:     value,
-		Series:    series,
-	})
-	if tx.Error != nil {
-		return errors.Wrap(tx.Error, "create value")
-	}
-
 	g.broker.Publish(&schema.Series{
 		SeriesName: seriesName,
 		Timestamp:  timestamp,
 		Value:      value,
+		SeriesID:   series.ID,
 	})
 
 	return nil
@@ -246,13 +238,52 @@ func (g *Graph) computeDerivedSeries() {
 				avg, ok := computeAvg(values)
 				if ok {
 					fmt.Println("avg", avg)
+					seriesName := m.SeriesName + "_avg_30s"
 					g.broker.Publish(&schema.Series{
-						SeriesName: m.SeriesName + "_avg_30s",
+						SeriesName: seriesName,
 						Timestamp:  m.Timestamp,
 						Value:      avg,
+						SeriesID:   database.HashedID(seriesName),
 					})
 				}
 			}
+		}
+	}
+}
+
+func (g *Graph) dbWriter() {
+	msgCh := g.broker.Subscribe()
+	defer g.broker.Unsubscribe(msgCh)
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+
+	var values []database.Value
+
+	for {
+		select {
+		case msg := <-msgCh:
+			switch m := msg.(type) {
+			case *schema.Series:
+				fmt.Println(m.SeriesName, hex.EncodeToString(m.SeriesID))
+				values = append(values, database.Value{
+					ID:        database.RandomID(),
+					Timestamp: m.Timestamp,
+					Value:     m.Value,
+					SeriesID:  m.SeriesID,
+				})
+			}
+		case <-ticker.C:
+			if len(values) == 0 {
+				continue
+			}
+
+			tx := g.db.Create(&values)
+			if tx.Error != nil {
+				g.errCh <- errors.Wrap(tx.Error, "create value")
+				return
+			}
+
+			values = nil
 		}
 	}
 }
