@@ -1,6 +1,7 @@
 package rtgraph
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/platform/common/broker"
@@ -126,7 +127,7 @@ func (g *Graph) GetInitialData(subscribed_ []string) (
 	//var t0 time.Time
 	result := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		row, m, err2 := g.packRow(d)
+		row, m, err2 := g.packRow(d.SeriesID, d.Timestamp, d.Value)
 		if err2 != nil {
 			return m, err2
 		}
@@ -137,7 +138,11 @@ func (g *Graph) GetInitialData(subscribed_ []string) (
 	return result, nil
 }
 
-func (g *Graph) packRow(d database.Value) ([]any, *messages.Data, error) {
+func (g *Graph) packRow(
+	seriesID []byte,
+	timestamp time.Time,
+	value float64,
+) ([]any, *messages.Data, error) {
 	//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
 	//	result.Rows = append(result.Rows, []any{
 	//		d.Timestamp.UnixMilli(),
@@ -147,18 +152,18 @@ func (g *Graph) packRow(d database.Value) ([]any, *messages.Data, error) {
 	//t0 = d.Timestamp
 
 	row := make([]any, len(g.subscribed)+1)
-	row[0] = d.Timestamp.UnixMilli()
+	row[0] = timestamp.UnixMilli()
 
 	// first fill with nils
 	for i := 0; i < len(g.subscribed); i++ {
 		row[i+1] = nil
 	}
 
-	pos, ok := g.positions[string(d.SeriesID)]
+	pos, ok := g.positions[string(seriesID)]
 	if !ok {
-		return nil, nil, fmt.Errorf("found value %s with unknown series", d.Series.Name)
+		return nil, nil, fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
 	}
-	row[pos] = floatP(float32(d.Value))
+	row[pos] = floatP(float32(value))
 	return row, nil, nil
 }
 

@@ -72,7 +72,12 @@ function makeGraph(elem, opts) {
     ws.onmessage = message => {
         if (message.data instanceof ArrayBuffer) {
             let d = msgpack.decode(new Uint8Array(message.data));
-            console.log(d.rows);
+
+            console.log(d.rows.length);
+            if (d.rows.length > 0) {
+                console.log(d.rows[0])
+            }
+
             update(d.rows);
             return;
         }
