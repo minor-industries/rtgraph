@@ -1,6 +1,7 @@
 package rtgraph
 
 import (
+	"container/list"
 	"encoding/hex"
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
@@ -60,6 +61,7 @@ func New(
 
 	go br.Start()
 	go g.publishPrometheusMetrics()
+	go g.computeDerivedSeries()
 
 	return g, nil
 }
@@ -226,4 +228,62 @@ func (g *Graph) Subscribe(
 			}
 		}
 	}
+}
+
+func (g *Graph) computeDerivedSeries() {
+	msgCh := g.broker.Subscribe()
+	defer g.broker.Unsubscribe(msgCh)
+
+	values := list.New()
+
+	for msg := range msgCh {
+		switch m := msg.(type) {
+		case *schema.Series:
+			switch m.SeriesName {
+			case "sample1":
+				values.PushBack(m)
+				removeOld(values, m.Timestamp.Add(-30*time.Second))
+				avg, ok := computeAvg(values)
+				if ok {
+					fmt.Println("avg", avg)
+					g.broker.Publish(&schema.Series{
+						SeriesName: m.SeriesName + "_avg_30s",
+						Timestamp:  m.Timestamp,
+						Value:      avg,
+					})
+				}
+			}
+		}
+	}
+}
+
+func removeOld(values *list.List, cutoff time.Time) {
+	for {
+		e := values.Front()
+		v := e.Value.(*schema.Series)
+		if v.Timestamp.Before(cutoff) {
+			fmt.Println("remove", v.Timestamp)
+			values.Remove(e)
+		} else {
+			break
+		}
+	}
+}
+
+func computeAvg(values *list.List) (float64, bool) {
+	sum := 0.0
+	count := 0
+	for e := values.Front(); e != nil; e = e.Next() {
+		v := e.Value.(*schema.Series)
+		sum += v.Value
+		count++
+	}
+
+	fmt.Println(count)
+
+	if count > 0 {
+		return sum / float64(count), true
+	}
+
+	return 0, false
 }
