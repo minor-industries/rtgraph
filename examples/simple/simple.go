@@ -29,6 +29,8 @@ func run() error {
 		[]string{
 			"sample1",
 			"sample2",
+
+			"sample1_avg_30s",
 		},
 	)
 	if err != nil {
