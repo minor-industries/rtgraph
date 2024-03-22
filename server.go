@@ -108,15 +108,16 @@ func sendInitialData(
 	conn *websocket.Conn,
 	subscribed []string,
 ) error {
+	now := time.Now()
+	if err := wsjson.Write(ctx, conn, map[string]any{
+		"now": now.UnixMilli(),
+	}); err != nil {
+		return errors.Wrap(err, "write timestamp")
+	}
+
 	data, err := graph.GetInitialData(subscribed)
 	if err != nil {
 		return errors.Wrap(err, "get initial data")
-	}
-
-	if err := wsjson.Write(ctx, conn, map[string]any{
-		"now": time.Now().UnixMilli(),
-	}); err != nil {
-		return errors.Wrap(err, "write timestamp")
 	}
 
 	binmsg, err := data.MarshalMsg(nil)

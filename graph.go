@@ -20,6 +20,9 @@ type Graph struct {
 	broker    *broker.Broker
 	allSeries map[string]*database.Series
 	server    *gin.Engine
+
+	positions  map[string]int
+	subscribed []string
 }
 
 func New(
@@ -98,19 +101,20 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) GetInitialData(subscribed []string) (
+func (g *Graph) GetInitialData(subscribed_ []string) (
 	*messages.Data,
 	error,
 ) {
-	positions := map[string]int{}
+	g.subscribed = subscribed_
+	g.positions = map[string]int{}
 
 	var ids [][]byte
-	for idx, sub := range subscribed {
+	for idx, sub := range g.subscribed {
 		s, ok := g.allSeries[sub]
 		if !ok {
 			return nil, errors.New("unknown series")
 		}
-		positions[string(s.ID)] = idx + 1
+		g.positions[string(s.ID)] = idx + 1
 		ids = append(ids, s.ID)
 	}
 
@@ -122,32 +126,40 @@ func (g *Graph) GetInitialData(subscribed []string) (
 	//var t0 time.Time
 	result := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
-		//	result.Rows = append(result.Rows, []any{
-		//		d.Timestamp.UnixMilli(),
-		//		floatP(float32(math.NaN())),
-		//	})
-		//}
-		//t0 = d.Timestamp
-
-		row := make([]any, len(subscribed)+1)
-		row[0] = d.Timestamp.UnixMilli()
-
-		// first fill with nils
-		for i := 0; i < len(subscribed); i++ {
-			row[i+1] = nil
+		row, m, err2 := g.packRow(d)
+		if err2 != nil {
+			return m, err2
 		}
-
-		pos, ok := positions[string(d.SeriesID)]
-		if !ok {
-			return nil, fmt.Errorf("found value %s with unknown series", d.Series.Name)
-		}
-		row[pos] = floatP(float32(d.Value))
 
 		result.Rows = append(result.Rows, row)
 	}
 
 	return result, nil
+}
+
+func (g *Graph) packRow(d database.Value) ([]any, *messages.Data, error) {
+	//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
+	//	result.Rows = append(result.Rows, []any{
+	//		d.Timestamp.UnixMilli(),
+	//		floatP(float32(math.NaN())),
+	//	})
+	//}
+	//t0 = d.Timestamp
+
+	row := make([]any, len(g.subscribed)+1)
+	row[0] = d.Timestamp.UnixMilli()
+
+	// first fill with nils
+	for i := 0; i < len(g.subscribed); i++ {
+		row[i+1] = nil
+	}
+
+	pos, ok := g.positions[string(d.SeriesID)]
+	if !ok {
+		return nil, nil, fmt.Errorf("found value %s with unknown series", d.Series.Name)
+	}
+	row[pos] = floatP(float32(d.Value))
+	return row, nil, nil
 }
 
 func (g *Graph) Subscribe(

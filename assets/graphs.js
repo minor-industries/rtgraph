@@ -11,7 +11,7 @@ function makeGraph(elem, opts) {
     const windowSize = opts.windowSize || 10 * minute; // milliseconds
 
     let g;
-    let data;
+    let data = [];
     let t0Server;
     let t0Client;
 
@@ -24,10 +24,13 @@ function makeGraph(elem, opts) {
     };
 
 
-    function make(rows) {
-        data = rows.map(mapDate);
+    function update(rows) {
+        const newGraph = data.length === 0;
+
+        let newRows = rows.map(mapDate);
+
         opts.mappers.forEach(mapper => {
-            data = data.map(([first, ...rest]) => {
+            newRows = newRows.map(([first, ...rest]) => {
                 return [first, ...rest.map(x => {
                     if (x === null || isNaN(x)) {
                         return x;
@@ -37,21 +40,29 @@ function makeGraph(elem, opts) {
             })
         })
 
-        g = new Dygraph(// containing div
-            elem,
-            data,
-            {
-                // dateWindow: [t0, t1],
-                title: opts.title,
-                ylabel: opts.ylabel,
-                labels: opts.labels,
-                includeZero: opts.includeZero,
-                strokeWidth: opts.strokeWidth,
-                dateWindow: computeDateWindow(),
-                height: opts.height,
-                rightGap: 5,
-                connectSeparatedPoints: true
+        data.push(...newRows);
+
+        if (newGraph) {
+            g = new Dygraph(
+                elem,
+                data,
+                {
+                    // dateWindow: [t0, t1],
+                    title: opts.title,
+                    ylabel: opts.ylabel,
+                    labels: opts.labels,
+                    includeZero: opts.includeZero,
+                    strokeWidth: opts.strokeWidth,
+                    dateWindow: computeDateWindow(),
+                    height: opts.height,
+                    rightGap: 5,
+                    connectSeparatedPoints: true
+                });
+        } else {
+            g.updateOptions({
+                file: data,
             });
+        }
     }
 
     const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
@@ -59,11 +70,10 @@ function makeGraph(elem, opts) {
     ws.binaryType = "arraybuffer";
 
     ws.onmessage = message => {
-
         if (message.data instanceof ArrayBuffer) {
             let d = msgpack.decode(new Uint8Array(message.data));
             console.log(d.rows);
-            make(d.rows);
+            update(d.rows);
             return;
         }
 
@@ -86,26 +96,6 @@ function makeGraph(elem, opts) {
                     dateWindow: computeDateWindow(),
                 })
             }, 250);
-        }
-
-        // if (msg.initial_data !== undefined) {
-        //     make(msg.initial_data);
-        // }
-
-        if (msg.rows !== undefined) {
-            return;
-            let rows = msg.rows.map(mapDate);
-
-            opts.mappers.forEach(mapper => {
-                rows = rows.map(value => {
-                    return [value[0], mapper(value[1])]
-                })
-            })
-
-            data.push(...rows);
-            g.updateOptions({
-                file: data,
-            });
         }
     };
 
