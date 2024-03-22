@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/assets"
+	"github.com/minor-industries/rtgraph/messages"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
@@ -82,10 +83,16 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		g.Subscribe(subscribed[0], func(obj any) error {
-			if err := wsjson.Write(ctx, conn, obj); err != nil {
-				return errors.Wrap(err, "write websocket")
+		g.Subscribe(subscribed[0], func(data *messages.Data) error {
+			binmsg, err := data.MarshalMsg(nil)
+			if err != nil {
+				return errors.Wrap(err, "marshal msg")
 			}
+
+			if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
+				return errors.Wrap(err, "write binary")
+			}
+
 			return nil
 		})
 	})

@@ -127,9 +127,9 @@ func (g *Graph) GetInitialData(subscribed_ []string) (
 	//var t0 time.Time
 	result := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		row, m, err2 := g.packRow(d.SeriesID, d.Timestamp, d.Value)
-		if err2 != nil {
-			return m, err2
+		row, err := g.packRow(d.SeriesID, d.Timestamp, d.Value)
+		if err != nil {
+			return nil, err
 		}
 
 		result.Rows = append(result.Rows, row)
@@ -142,7 +142,7 @@ func (g *Graph) packRow(
 	seriesID []byte,
 	timestamp time.Time,
 	value float64,
-) ([]any, *messages.Data, error) {
+) ([]any, error) {
 	//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
 	//	result.Rows = append(result.Rows, []any{
 	//		d.Timestamp.UnixMilli(),
@@ -161,15 +161,15 @@ func (g *Graph) packRow(
 
 	pos, ok := g.positions[string(seriesID)]
 	if !ok {
-		return nil, nil, fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
+		return nil, fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
 	}
 	row[pos] = floatP(float32(value))
-	return row, nil, nil
+	return row, nil
 }
 
 func (g *Graph) Subscribe(
 	subscribed string,
-	callback func(obj any) error,
+	callback func(data *messages.Data) error,
 ) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
@@ -178,13 +178,11 @@ func (g *Graph) Subscribe(
 		switch m := msg.(type) {
 		case *schema.Series:
 			if m.SeriesName == subscribed {
-				newRows := [][2]any{{
-					m.Timestamp.UnixMilli(),
-					m.Value,
-				}}
-				resp := map[string]any{
-					"rows": newRows,
+				row, err := g.packRow(database.HashedID(m.SeriesName), m.Timestamp, m.Value)
+				if err != nil {
+					panic(err) // TODO
 				}
+				resp := &messages.Data{Rows: []interface{}{row}}
 				if err := callback(resp); err != nil {
 					fmt.Println(errors.Wrap(err, "callback error"))
 					return
