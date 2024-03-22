@@ -12,7 +12,8 @@ func (g *Graph) computeDerivedSeries(computed []Computed) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
-	values := list.New()
+	//values := list.New()
+	valuesMap := map[string]*list.List{}
 
 	computedMap := map[string]Computed{}
 	for _, c := range computed {
@@ -27,6 +28,13 @@ func (g *Graph) computeDerivedSeries(computed []Computed) {
 				continue
 			}
 
+			computedName := c.Name()
+			if _, ok := valuesMap[computedName]; !ok {
+				valuesMap[computedName] = list.New()
+			}
+
+			values := valuesMap[computedName]
+
 			values.PushBack(m)
 			dt := -time.Duration(c.Seconds) * time.Second
 			removeOld(values, m.Timestamp.Add(dt))
@@ -35,7 +43,7 @@ func (g *Graph) computeDerivedSeries(computed []Computed) {
 			case "avg":
 				avg, ok := computeAvg(values)
 				if ok {
-					seriesName := c.Name()
+					seriesName := computedName
 					g.broker.Publish(&schema.Series{
 						SeriesName: seriesName,
 						Timestamp:  m.Timestamp,
