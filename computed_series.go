@@ -75,6 +75,9 @@ func computeAvg(values *list.List) (float64, bool) {
 	count := 0
 	for e := values.Front(); e != nil; e = e.Next() {
 		v := e.Value.(*schema.Series)
+		if v.Value == 0 { // ignore zeros in the calculation
+			continue
+		}
 		sum += v.Value
 		count++
 	}
