@@ -6,9 +6,9 @@ import (
 
 type Value struct {
 	ID        []byte    `gorm:"primary_key"`
-	Timestamp time.Time `gorm:"index:"`
+	Timestamp time.Time `gorm:"index"`
 	Value     float64
-	SeriesID  []byte
+	SeriesID  []byte  `gorm:"index"`
 	Series    *Series `gorm:"foreignKey:SeriesID"`
 }
 
@@ -24,6 +24,6 @@ type RawValue struct {
 	ServiceID        string
 	CharacteristicID string
 
-	Timestamp time.Time `gorm:"index:"`
+	Timestamp time.Time `gorm:"index"`
 	Message   []byte
 }
