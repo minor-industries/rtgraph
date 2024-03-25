@@ -135,8 +135,11 @@ func (g *Graph) getPositionsAndIDs(subscribed []string) (*subscription, error) {
 	}, nil
 }
 
-func (g *Graph) getInitialData(sub *subscription) (*messages.Data, error) {
-	data, err := database.LoadData(g.db, sub.ids)
+func (g *Graph) getInitialData(
+	sub *subscription,
+	start time.Time,
+) (*messages.Data, error) {
+	data, err := database.LoadData(g.db, sub.ids, start)
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
 	}
@@ -187,6 +190,7 @@ func (g *Graph) packRow(
 
 func (g *Graph) Subscribe(
 	series []string,
+	start time.Time,
 	callback func(data *messages.Data) error,
 ) {
 	sub, err := g.getPositionsAndIDs(series)
@@ -194,7 +198,7 @@ func (g *Graph) Subscribe(
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
 
-	initialData, err := g.getInitialData(sub)
+	initialData, err := g.getInitialData(sub, start)
 	if err != nil {
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}

@@ -133,7 +133,11 @@ function makeGraph(elem, opts) {
 
     ws.onopen = event => {
         setTimeout(function () {
-            ws.send(JSON.stringify({series: opts.series}));
+            ws.send(JSON.stringify({
+                    series: opts.series,
+                    windowSize: opts.windowSize, // milliseconds
+                }
+            ));
         })
     }
 }

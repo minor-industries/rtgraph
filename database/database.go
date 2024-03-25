@@ -6,6 +6,7 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"time"
 )
 
 func Get(filename string) (*gorm.DB, error) {
@@ -85,10 +86,18 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 	return typeMap, nil
 }
 
-func LoadData(db *gorm.DB, series [][]byte) ([]Value, error) {
+func LoadData(
+	db *gorm.DB,
+	series [][]byte,
+	start time.Time,
+) ([]Value, error) {
 	var result []Value
 
-	tx := db.Where("series_id IN ?", series).Order("timestamp asc").Find(&result)
+	tx := db.Where(
+		"series_id IN ? and timestamp >= ?",
+		series,
+		start,
+	).Order("timestamp asc").Find(&result)
 	if tx.Error != nil {
 		return nil, errors.Wrap(tx.Error, "find")
 	}
