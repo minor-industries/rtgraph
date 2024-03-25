@@ -15,44 +15,46 @@ func (g *Graph) computeDerivedSeries(computed []Computed) {
 	//values := list.New()
 	valuesMap := map[string]*list.List{}
 
-	computedMap := map[string]Computed{}
+	computedMap := map[string][]Computed{}
 	for _, c := range computed {
-		computedMap[c.SeriesName] = c
+		computedMap[c.SeriesName] = append(computedMap[c.SeriesName], c)
 	}
 
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			c, ok := computedMap[m.SeriesName]
+			cs_, ok := computedMap[m.SeriesName]
 			if !ok {
 				continue
 			}
 
-			computedName := c.Name()
-			if _, ok := valuesMap[computedName]; !ok {
-				valuesMap[computedName] = list.New()
-			}
-
-			values := valuesMap[computedName]
-
-			values.PushBack(m)
-			dt := -time.Duration(c.Seconds) * time.Second
-			removeOld(values, m.Timestamp.Add(dt))
-
-			switch c.Function {
-			case "avg":
-				avg, ok := computeAvg(values)
-				if ok {
-					seriesName := computedName
-					g.broker.Publish(&schema.Series{
-						SeriesName: seriesName,
-						Timestamp:  m.Timestamp,
-						Value:      avg,
-						SeriesID:   database.HashedID(seriesName),
-					})
+			for _, c := range cs_ {
+				computedName := c.Name()
+				if _, ok := valuesMap[computedName]; !ok {
+					valuesMap[computedName] = list.New()
 				}
-			default:
-				panic(fmt.Errorf("unknown function %s", c.Function))
+
+				values := valuesMap[computedName]
+
+				values.PushBack(m)
+				dt := -time.Duration(c.Seconds) * time.Second
+				removeOld(values, m.Timestamp.Add(dt))
+
+				switch c.Function {
+				case "avg":
+					avg, ok := computeAvg(values)
+					if ok {
+						seriesName := computedName
+						g.broker.Publish(&schema.Series{
+							SeriesName: seriesName,
+							Timestamp:  m.Timestamp,
+							Value:      avg,
+							SeriesID:   database.HashedID(seriesName),
+						})
+					}
+				default:
+					panic(fmt.Errorf("unknown function %s", c.Function))
+				}
 			}
 		}
 	}
