@@ -1,6 +1,17 @@
 const mapDate = ([first, ...rest]) => [new Date(first), ...rest];
 
 
+function supplant(s, o) {
+    // https://stackoverflow.com/questions/1408289/how-can-i-do-string-interpolation-in-javascript
+    return s.replace(/{([^{}]*)}/g,
+        function (a, b) {
+            const r = o[b];
+            return typeof r === 'string' || typeof r === 'number' ? r : a;
+        }
+    );
+}
+
+
 function makeGraph(elem, opts) {
     const second = 1000;
     const minute = second * 60;
@@ -52,7 +63,7 @@ function makeGraph(elem, opts) {
                 data,
                 {
                     // dateWindow: [t0, t1],
-                    title: opts.title,
+                    title: supplant(opts.title, {value: ""}), // TODO: do better here
                     ylabel: opts.ylabel,
                     labels: opts.labels,
                     includeZero: opts.includeZero,
@@ -64,9 +75,20 @@ function makeGraph(elem, opts) {
                     valueRange: opts.valueRange
                 });
         } else {
-            g.updateOptions({
+            let updateOpts = {
                 file: data,
-            });
+            };
+
+            // update the title if needed
+            if (data.length > 0) {
+                let lastRow = data[data.length - 1];
+                const lastValue = lastRow[1]; // for now use the first Y value
+                if (lastValue !== null && lastValue !== undefined) {
+                    updateOpts.title = supplant(opts.title, {value: lastValue.toFixed(2)});
+                }
+            }
+
+            g.updateOptions(updateOpts);
         }
     }
 
