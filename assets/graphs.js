@@ -72,7 +72,8 @@ function makeGraph(elem, opts) {
                     height: opts.height,
                     rightGap: 5,
                     connectSeparatedPoints: true,
-                    valueRange: opts.valueRange
+                    valueRange: opts.valueRange,
+                    series: opts.series,
                 });
         } else {
             let updateOpts = {
@@ -134,7 +135,7 @@ function makeGraph(elem, opts) {
     ws.onopen = event => {
         setTimeout(function () {
             ws.send(JSON.stringify({
-                    series: opts.series,
+                    series: opts.seriesNames,
                     windowSize: opts.windowSize, // milliseconds
                 }
             ));

@@ -20,12 +20,17 @@
 
         Dygraph.onDOMready(function onDOMready() {
             makeGraph(document.getElementById("graphdiv0"), {
-                series: ["sample1", "sample1_avg_30s", "sample2"],
+                seriesNames: ["sample1", "sample1_avg_30s", "sample2"],
                 title: "Sample Series: {value}",
                 height: 300,
                 windowSize: minute,
                 labels: ["x", "Y1", "Y2", "Y3"],
-                mappers: [x => x * 10.0]
+                mappers: [x => x * 10.0],
+                series: {
+                    Y1: {
+                        strokeWidth: 1,
+                    }
+                },
             });
         });
     </script>
