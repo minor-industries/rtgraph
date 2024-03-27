@@ -126,13 +126,13 @@ class Graph {
         }, 250);
     }
 
-    computeAfter(args) {
+    getLastPoint() {
         if (this.data.length === 0) {
             return undefined;
         }
 
         const lastPoint = this.data[this.data.length - 1];
-        return lastPoint[0].getTime() + 1;
+        return lastPoint[0].getTime();
     }
 
     connect() {
@@ -164,10 +164,12 @@ class Graph {
 
         ws.onopen = event => {
             setTimeout(() => {
+                let lastPointMs = this.getLastPoint();
+                console.log("lastPointMs: " + lastPointMs);
                 ws.send(JSON.stringify({
                         series: this.opts.seriesNames,
                         windowSize: this.opts.windowSize,
-                        after: this.computeAfter(),
+                        lastPointMs: lastPointMs,
                     }
                 ));
             })

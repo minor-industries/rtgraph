@@ -137,17 +137,22 @@ func (g *Graph) getPositionsAndIDs(subscribed []string) (*subscription, error) {
 
 func (g *Graph) getInitialData(
 	sub *subscription,
-	start time.Time,
-	after uint64,
+	windowStart time.Time,
+	lastPointMs uint64,
 ) (*messages.Data, error) {
 	var data []database.Value
 	var err error
-	if after != 0 {
-		startAfter := time.UnixMilli(int64(after))
-		data, err = database.LoadDataWindow(g.db, sub.ids, startAfter)
-	} else {
-		data, err = database.LoadDataWindow(g.db, sub.ids, start)
+
+	start := windowStart // by default
+	if lastPointMs != 0 {
+		tStartAfter := time.UnixMilli(int64(lastPointMs + 1))
+		if tStartAfter.After(windowStart) {
+			// only use if inside the start window
+			start = tStartAfter
+		}
 	}
+
+	data, err = database.LoadDataWindow(g.db, sub.ids, start)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
@@ -200,7 +205,7 @@ func (g *Graph) packRow(
 func (g *Graph) Subscribe(
 	series []string,
 	start time.Time,
-	after uint64,
+	lastPointMs uint64,
 	callback func(data *messages.Data) error,
 ) {
 	sub, err := g.getPositionsAndIDs(series)
@@ -208,7 +213,7 @@ func (g *Graph) Subscribe(
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
 
-	initialData, err := g.getInitialData(sub, start, after)
+	initialData, err := g.getInitialData(sub, start, lastPointMs)
 	if err != nil {
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
