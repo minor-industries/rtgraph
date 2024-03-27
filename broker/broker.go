@@ -9,12 +9,13 @@ type Message interface {
 }
 
 type Broker struct {
+	subCount  int64  // needs 64-bit alignment
+	dropCount uint64 // needs 64-bit alignment
+
 	stopCh    chan struct{}
 	publishCh chan Message
 	subCh     chan chan Message
 	unsubCh   chan chan Message
-	subCount  int32
-	dropCount uint64
 }
 
 func NewBroker() *Broker {
@@ -34,10 +35,10 @@ func (b *Broker) Start() {
 			return
 		case msgCh := <-b.subCh:
 			subs[msgCh] = struct{}{}
-			atomic.StoreInt32(&b.subCount, int32(len(subs)))
+			atomic.StoreInt64(&b.subCount, int64(len(subs)))
 		case msgCh := <-b.unsubCh:
 			delete(subs, msgCh)
-			atomic.StoreInt32(&b.subCount, int32(len(subs)))
+			atomic.StoreInt64(&b.subCount, int64(len(subs)))
 		case msg := <-b.publishCh:
 			for msgCh := range subs {
 				// msgCh is buffered, use non-blocking send to protect the broker:
@@ -70,7 +71,7 @@ func (b *Broker) Publish(msg Message) {
 }
 
 func (b *Broker) SubCount() int {
-	return int(atomic.LoadInt32(&b.subCount))
+	return int(atomic.LoadInt64(&b.subCount))
 }
 
 func (b *Broker) DropCount() int {
