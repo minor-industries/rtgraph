@@ -105,8 +105,14 @@ class Graph {
     }
 
     setDate(date) {
+        const firstSet = this.t0Server === undefined;
+
         this.t0Server = date;
         this.t0Client = new Date();
+
+        if (firstSet) {
+            this.scroll();
+        }
     }
 
     scroll() {
@@ -143,7 +149,6 @@ class Graph {
             if (msg.now !== undefined) {
                 // handle case when client and server times don't match
                 this.setDate(new Date(msg.now));
-                this.scroll();
             }
         };
 
