@@ -126,11 +126,17 @@ class Graph {
         }, 250);
     }
 
-    getStart() {
-        return this.opts.windowSize;
+    computeAfter(args) {
+        if (this.data.length === 0) {
+            return undefined;
+        }
+
+        const lastPoint = this.data[this.data.length - 1];
+        return lastPoint[0].getTime() + 1;
     }
 
     connect() {
+        console.log("connecting:", this.opts.seriesNames);
         const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
@@ -160,18 +166,25 @@ class Graph {
             setTimeout(() => {
                 ws.send(JSON.stringify({
                         series: this.opts.seriesNames,
-                        windowSize: this.getStart(), // milliseconds
+                        windowSize: this.opts.windowSize,
+                        after: this.computeAfter(),
                     }
                 ));
             })
         }
 
         ws.onerror = err => {
-            console.log("websocket error: " + err)
+            console.log("websocket error: " + err);
+            ws.close();
         }
 
         ws.onclose = err => {
-            console.log("websocket close: " + err)
+            console.log("websocket close: " + err);
+            this.reconnect();
         }
+    }
+
+    reconnect() {
+        setTimeout(() => this.connect(), 1000);
     }
 }

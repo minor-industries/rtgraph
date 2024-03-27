@@ -86,7 +86,7 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 	return typeMap, nil
 }
 
-func LoadData(
+func LoadDataWindow(
 	db *gorm.DB,
 	series [][]byte,
 	start time.Time,
