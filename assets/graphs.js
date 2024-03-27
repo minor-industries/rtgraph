@@ -44,6 +44,9 @@ class Graph {
         return [t0, t1]
     };
 
+    computeLabels() {
+        return this.data.length > 0 ? this.opts.labels : [];
+    }
 
     update(rows) {
         const newGraph = this.data.length === 0;
@@ -64,6 +67,7 @@ class Graph {
         this.data.push(...newRows);
 
         if (newGraph) {
+            let labels = this.computeLabels();
             this.g = new Dygraph(
                 this.elem,
                 this.data,
@@ -71,7 +75,7 @@ class Graph {
                     // dateWindow: [t0, t1],
                     title: supplant(this.opts.title, {value: ""}), // TODO: do better here
                     ylabel: this.opts.ylabel,
-                    labels: this.opts.labels,
+                    labels: labels,
                     includeZero: this.opts.includeZero,
                     strokeWidth: this.opts.strokeWidth,
                     dateWindow: this.computeDateWindow(),
@@ -84,6 +88,7 @@ class Graph {
         } else {
             let updateOpts = {
                 file: this.data,
+                labels: this.computeLabels()
             };
 
             // update the title if needed
@@ -123,11 +128,6 @@ class Graph {
         ws.onmessage = message => {
             if (message.data instanceof ArrayBuffer) {
                 let d = msgpack.decode(new Uint8Array(message.data));
-
-                console.log(d.rows.length);
-                if (d.rows.length > 0) {
-                    console.log(d.rows[0])
-                }
 
                 this.update(d.rows);
                 return;
