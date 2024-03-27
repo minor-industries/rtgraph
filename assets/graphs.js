@@ -64,7 +64,6 @@ class Graph {
         this.data.push(...newRows);
 
         if (newGraph) {
-            console.log("new graph");
             this.g = new Dygraph(
                 this.elem,
                 this.data,
