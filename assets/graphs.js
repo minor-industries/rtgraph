@@ -126,6 +126,10 @@ class Graph {
         }, 250);
     }
 
+    getStart() {
+        return this.opts.windowSize;
+    }
+
     connect() {
         const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
         const ws = new WebSocket(url);
@@ -156,7 +160,7 @@ class Graph {
             setTimeout(() => {
                 ws.send(JSON.stringify({
                         series: this.opts.seriesNames,
-                        windowSize: this.opts.windowSize, // milliseconds
+                        windowSize: this.getStart(), // milliseconds
                     }
                 ));
             })
