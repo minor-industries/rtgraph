@@ -120,7 +120,6 @@ class Graph {
         const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
-        const graph = this;
 
         ws.onmessage = message => {
             if (message.data instanceof ArrayBuffer) {
@@ -131,7 +130,7 @@ class Graph {
                     console.log(d.rows[0])
                 }
 
-                graph.update(d.rows);
+                this.update(d.rows);
                 return;
             }
 
@@ -144,16 +143,16 @@ class Graph {
 
             if (msg.now !== undefined) {
                 // handle case when client and server times don't match
-                graph.setDate(new Date(msg.now));
-                graph.scroll();
+                this.setDate(new Date(msg.now));
+                this.scroll();
             }
         };
 
         ws.onopen = event => {
-            setTimeout(function () {
+            setTimeout(() => {
                 ws.send(JSON.stringify({
-                        series: graph.opts.seriesNames,
-                        windowSize: graph.opts.windowSize, // milliseconds
+                        series: this.opts.seriesNames,
+                        windowSize: this.opts.windowSize, // milliseconds
                     }
                 ));
             })
