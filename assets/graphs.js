@@ -11,40 +11,46 @@ function supplant(s, o) {
     );
 }
 
+class Graph {
+    constructor(elem, opts) {
+        const second = 1000;
+        const minute = second * 60;
+        const hour = second * 24;
 
-function makeGraph(elem, opts) {
-    const second = 1000;
-    const minute = second * 60;
-    const hour = second * 24;
+        this.elem = elem;
+        this.opts = opts;
 
-    if (opts.labels === undefined || opts.labels === null) {
-        throw new Error("labels not given");
+        if (this.opts.labels === undefined || this.opts.labels === null) {
+            throw new Error("labels not given");
+        }
+
+        this.opts.mappers = this.opts.mappers || [];
+        this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
+        this.windowSize = this.opts.windowSize || 10 * minute; // milliseconds
+
+        this.g = undefined;
+        this.data = [];
+        this.t0Server = undefined;
+        this.t0Client = undefined;
+
+        this.connect();
     }
 
-    opts.mappers = opts.mappers || [];
-    opts.strokeWidth = opts.strokeWidth || 3.0;
-    const windowSize = opts.windowSize || 10 * minute; // milliseconds
-
-    let g;
-    let data = [];
-    let t0Server;
-    let t0Client;
-
-    const computeDateWindow = () => {
+    computeDateWindow() {
         const t1Client = new Date();
-        const dt = t1Client.getTime() - t0Client.getTime()
-        const t1 = new Date(t0Server.getTime() + dt);
-        const t0 = new Date(t1.getTime() - windowSize);
+        const dt = t1Client.getTime() - this.t0Client.getTime()
+        const t1 = new Date(this.t0Server.getTime() + dt);
+        const t0 = new Date(t1.getTime() - this.windowSize);
         return [t0, t1]
     };
 
 
-    function update(rows) {
-        const newGraph = data.length === 0;
+    update(rows) {
+        const newGraph = this.data.length === 0;
 
         let newRows = rows.map(mapDate);
 
-        opts.mappers.forEach(mapper => {
+        this.opts.mappers.forEach(mapper => {
             newRows = newRows.map(([first, ...rest]) => {
                 return [first, ...rest.map(x => {
                     if (x === null || isNaN(x)) {
@@ -55,90 +61,110 @@ function makeGraph(elem, opts) {
             })
         })
 
-        data.push(...newRows);
+        this.data.push(...newRows);
 
         if (newGraph) {
-            g = new Dygraph(
-                elem,
-                data,
+            console.log("new graph");
+            this.g = new Dygraph(
+                this.elem,
+                this.data,
                 {
                     // dateWindow: [t0, t1],
-                    title: supplant(opts.title, {value: ""}), // TODO: do better here
-                    ylabel: opts.ylabel,
-                    labels: opts.labels,
-                    includeZero: opts.includeZero,
-                    strokeWidth: opts.strokeWidth,
-                    dateWindow: computeDateWindow(),
-                    height: opts.height,
+                    title: supplant(this.opts.title, {value: ""}), // TODO: do better here
+                    ylabel: this.opts.ylabel,
+                    labels: this.opts.labels,
+                    includeZero: this.opts.includeZero,
+                    strokeWidth: this.opts.strokeWidth,
+                    dateWindow: this.computeDateWindow(),
+                    height: this.opts.height,
                     rightGap: 5,
                     connectSeparatedPoints: true,
-                    valueRange: opts.valueRange,
-                    series: opts.series,
+                    valueRange: this.opts.valueRange,
+                    series: this.opts.series,
                 });
         } else {
             let updateOpts = {
-                file: data,
+                file: this.data,
             };
 
             // update the title if needed
-            if (data.length > 0) {
-                let lastRow = data[data.length - 1];
+            if (this.data.length > 0) {
+                let lastRow = this.data[this.data.length - 1];
                 const lastValue = lastRow[1]; // for now use the first Y value
                 if (lastValue !== null && lastValue !== undefined) {
-                    updateOpts.title = supplant(opts.title, {value: lastValue.toFixed(2)});
+                    updateOpts.title = supplant(this.opts.title, {value: lastValue.toFixed(2)});
                 }
             }
 
-            g.updateOptions(updateOpts);
+            this.g.updateOptions(updateOpts);
         }
     }
 
-    const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
-    const ws = new WebSocket(url);
-    ws.binaryType = "arraybuffer";
+    setDate(date) {
+        this.t0Server = date;
+        this.t0Client = new Date();
+    }
 
-    ws.onmessage = message => {
-        if (message.data instanceof ArrayBuffer) {
-            let d = msgpack.decode(new Uint8Array(message.data));
+    scroll() {
+        setInterval(() => {
+            if (this.g === undefined) {
+                return;
+            }
+            this.g.updateOptions({
+                dateWindow: this.computeDateWindow(),
+            })
+        }, 250);
+    }
 
-            console.log(d.rows.length);
-            if (d.rows.length > 0) {
-                console.log(d.rows[0])
+    connect() {
+        const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
+        const ws = new WebSocket(url);
+        ws.binaryType = "arraybuffer";
+        const graph = this;
+
+        ws.onmessage = message => {
+            if (message.data instanceof ArrayBuffer) {
+                let d = msgpack.decode(new Uint8Array(message.data));
+
+                console.log(d.rows.length);
+                if (d.rows.length > 0) {
+                    console.log(d.rows[0])
+                }
+
+                graph.update(d.rows);
+                return;
             }
 
-            update(d.rows);
-            return;
+            const msg = JSON.parse(message.data);
+
+            if (msg.error !== undefined) {
+                alert(msg.error);
+                return;
+            }
+
+            if (msg.now !== undefined) {
+                // handle case when client and server times don't match
+                graph.setDate(new Date(msg.now));
+                graph.scroll();
+            }
+        };
+
+        ws.onopen = event => {
+            setTimeout(function () {
+                ws.send(JSON.stringify({
+                        series: graph.opts.seriesNames,
+                        windowSize: graph.opts.windowSize, // milliseconds
+                    }
+                ));
+            })
         }
 
-        const msg = JSON.parse(message.data);
-
-        if (msg.error !== undefined) {
-            alert(msg.error);
-            return;
+        ws.onerror = err => {
+            console.log("websocket error: " + err)
         }
 
-        if (msg.now !== undefined) {
-            // handle case when client and server times don't match
-            t0Server = new Date(msg.now);
-            t0Client = new Date();
-            setInterval(function () {
-                if (g === undefined) {
-                    return;
-                }
-                g.updateOptions({
-                    dateWindow: computeDateWindow(),
-                })
-            }, 250);
+        ws.onclose = err => {
+            console.log("websocket close: " + err)
         }
-    };
-
-    ws.onopen = event => {
-        setTimeout(function () {
-            ws.send(JSON.stringify({
-                    series: opts.seriesNames,
-                    windowSize: opts.windowSize, // milliseconds
-                }
-            ));
-        })
     }
 }

@@ -19,7 +19,7 @@
         const minute = 1000 * 60;
 
         Dygraph.onDOMready(function onDOMready() {
-            makeGraph(document.getElementById("graphdiv0"), {
+            new Graph(document.getElementById("graphdiv0"), {
                 seriesNames: ["sample1", "sample1_avg_30s", "sample2"],
                 title: "Sample Series: {value}",
                 height: 300,
