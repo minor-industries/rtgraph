@@ -11,6 +11,7 @@ import (
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"math"
 	"time"
 )
 
@@ -165,33 +166,48 @@ func (g *Graph) getInitialData(
 	}
 
 	//var t0 time.Time
-	result := &messages.Data{Rows: []any{}}
-	for _, d := range data {
-		row, err := g.packRow(sub, d.SeriesID, d.Timestamp, d.Value)
-		if err != nil {
-			return nil, err
-		}
-
-		result.Rows = append(result.Rows, row)
-	}
-
-	return result, nil
-}
-
-func (g *Graph) packRow(
-	sub *subscription,
-	seriesID []byte,
-	timestamp time.Time,
-	value float64,
-) ([]any, error) {
 	//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
-	//	result.Rows = append(result.Rows, []any{
+	//	rows.Rows = append(rows.Rows, []any{
 	//		d.Timestamp.UnixMilli(),
 	//		floatP(float32(math.NaN())),
 	//	})
 	//}
 	//t0 = d.Timestamp
 
+	rows := &messages.Data{Rows: []any{}}
+	for idx, d := range data {
+		if idx == 0 {
+			// always insert a gap before the first datapoint
+			if err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, math.NaN()); err != nil {
+				return nil, err
+			}
+		} else {
+			prev := data[idx-1]
+			dt := d.Timestamp.Sub(prev.Timestamp)
+			if dt > 1200*time.Millisecond { // TODO: configure based on graph/series/etc
+				// insert gap if previous point too far away
+				if err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, d.Value); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, d.Value)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return rows, nil
+}
+
+func (g *Graph) packRow(
+	sub *subscription,
+	data *messages.Data,
+	seriesID []byte,
+	timestamp time.Time,
+	value float64,
+) error {
 	row := make([]any, len(sub.series)+1)
 	row[0] = timestamp.UnixMilli()
 
@@ -202,10 +218,12 @@ func (g *Graph) packRow(
 
 	pos, ok := sub.positions[string(seriesID)]
 	if !ok {
-		return nil, fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
+		return fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
 	}
 	row[pos] = floatP(float32(value))
-	return row, nil
+
+	data.Rows = append(data.Rows, row)
+	return nil
 }
 
 func (g *Graph) Subscribe(
@@ -238,17 +256,13 @@ func (g *Graph) Subscribe(
 		switch m := msg.(type) {
 		case *schema.Series:
 			if allSeries.Has(m.SeriesName) {
-				row, err := g.packRow(
-					sub,
-					database.HashedID(m.SeriesName),
-					m.Timestamp,
-					m.Value,
-				)
+				data := &messages.Data{Rows: []interface{}{}}
+				err := g.packRow(sub, data, database.HashedID(m.SeriesName), m.Timestamp, m.Value)
 				if err != nil {
 					panic(err) // TODO
 				}
-				resp := &messages.Data{Rows: []interface{}{row}}
-				if err := callback(resp); err != nil {
+
+				if err := callback(data); err != nil {
 					fmt.Println(errors.Wrap(err, "callback error"))
 					return
 				}
