@@ -1,7 +1,6 @@
 package rtgraph
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
@@ -11,7 +10,6 @@ import (
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
-	"math"
 	"time"
 )
 
@@ -23,22 +21,6 @@ type Graph struct {
 	broker    *broker.Broker
 	allSeries map[string]*database.Series
 	server    *gin.Engine
-}
-
-type subscription struct {
-	series    []string
-	ids       [][]byte
-	positions map[string]int
-}
-
-type Computed struct {
-	SeriesName string
-	Function   string
-	Seconds    int
-}
-
-func (c *Computed) Name() string {
-	return fmt.Sprintf("%s_%s_%ds", c.SeriesName, c.Function, c.Seconds)
 }
 
 func New(
@@ -122,7 +104,7 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) getPositionsAndIDs(subscribed []string) (*subscription, error) {
+func (g *Graph) newSubscription(subscribed []string) (*subscription, error) {
 	positions := map[string]int{}
 
 	var ids [][]byte
@@ -139,6 +121,7 @@ func (g *Graph) getPositionsAndIDs(subscribed []string) (*subscription, error) {
 		series:    subscribed,
 		ids:       ids,
 		positions: positions,
+		lastSeen:  map[string]time.Time{},
 	}, nil
 }
 
@@ -165,34 +148,9 @@ func (g *Graph) getInitialData(
 		return nil, errors.Wrap(err, "load data")
 	}
 
-	//var t0 time.Time
-	//if idx > 0 && d.Timestamp.Sub(t0) > 1500*time.Millisecond {
-	//	rows.Rows = append(rows.Rows, []any{
-	//		d.Timestamp.UnixMilli(),
-	//		floatP(float32(math.NaN())),
-	//	})
-	//}
-	//t0 = d.Timestamp
-
 	rows := &messages.Data{Rows: []any{}}
-	for idx, d := range data {
-		if idx == 0 {
-			// always insert a gap before the first datapoint
-			if err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, math.NaN()); err != nil {
-				return nil, err
-			}
-		} else {
-			prev := data[idx-1]
-			dt := d.Timestamp.Sub(prev.Timestamp)
-			if dt > 1200*time.Millisecond { // TODO: configure based on graph/series/etc
-				// insert gap if previous point too far away
-				if err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, d.Value); err != nil {
-					return nil, err
-				}
-			}
-		}
-
-		err := g.packRow(sub, rows, d.SeriesID, d.Timestamp, d.Value)
+	for _, d := range data {
+		err := sub.packRow(rows, d.SeriesID, d.Timestamp, d.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -201,38 +159,13 @@ func (g *Graph) getInitialData(
 	return rows, nil
 }
 
-func (g *Graph) packRow(
-	sub *subscription,
-	data *messages.Data,
-	seriesID []byte,
-	timestamp time.Time,
-	value float64,
-) error {
-	row := make([]any, len(sub.series)+1)
-	row[0] = timestamp.UnixMilli()
-
-	// first fill with nils
-	for i := 0; i < len(sub.series); i++ {
-		row[i+1] = nil
-	}
-
-	pos, ok := sub.positions[string(seriesID)]
-	if !ok {
-		return fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
-	}
-	row[pos] = floatP(float32(value))
-
-	data.Rows = append(data.Rows, row)
-	return nil
-}
-
 func (g *Graph) Subscribe(
 	series []string,
 	start time.Time,
 	lastPointMs uint64,
 	callback func(data *messages.Data) error,
 ) {
-	sub, err := g.getPositionsAndIDs(series)
+	sub, err := g.newSubscription(series)
 	if err != nil {
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
@@ -257,7 +190,7 @@ func (g *Graph) Subscribe(
 		case *schema.Series:
 			if allSeries.Has(m.SeriesName) {
 				data := &messages.Data{Rows: []interface{}{}}
-				err := g.packRow(sub, data, database.HashedID(m.SeriesName), m.Timestamp, m.Value)
+				err := sub.packRow(data, database.HashedID(m.SeriesName), m.Timestamp, m.Value)
 				if err != nil {
 					panic(err) // TODO
 				}

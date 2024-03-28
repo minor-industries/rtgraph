@@ -8,6 +8,16 @@ import (
 	"time"
 )
 
+type Computed struct {
+	SeriesName string
+	Function   string
+	Seconds    int
+}
+
+func (c *Computed) Name() string {
+	return fmt.Sprintf("%s_%s_%ds", c.SeriesName, c.Function, c.Seconds)
+}
+
 func (g *Graph) computeDerivedSeries(computed []Computed) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
