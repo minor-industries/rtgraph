@@ -170,6 +170,7 @@ class Graph {
                         series: this.opts.seriesNames,
                         windowSize: this.opts.windowSize,
                         lastPointMs: lastPointMs,
+                        maxGapMs: this.opts.maxGapMs || minute
                     }
                 ));
             })

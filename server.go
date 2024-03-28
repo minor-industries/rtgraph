@@ -56,13 +56,7 @@ func (g *Graph) setupServer() error {
 		}
 		conn.CloseRead(ctx)
 
-		type reqT struct {
-			Series      []string `json:"series"`
-			WindowSize  uint64   `json:"windowSize"`
-			LastPointMs uint64   `json:"lastPointMs"`
-		}
-
-		var req reqT
+		var req SubscriptionRequest
 		err = json.Unmarshal(reqBytes, &req)
 		if wsErr != nil {
 			fmt.Println("ws error", errors.Wrap(err, "unmarshal json"))
@@ -77,10 +71,7 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		windowSize := time.Duration(req.WindowSize) * time.Millisecond
-		start := now.Add(-windowSize)
-
-		g.Subscribe(req.Series, start, req.LastPointMs, func(data *messages.Data) error {
+		g.Subscribe(&req, now, func(data *messages.Data) error {
 			binmsg, err := data.MarshalMsg(nil)
 			if err != nil {
 				return errors.Wrap(err, "marshal msg")

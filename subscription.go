@@ -8,11 +8,19 @@ import (
 	"time"
 )
 
+type SubscriptionRequest struct {
+	Series      []string `json:"series"`
+	WindowSize  uint64   `json:"windowSize"`
+	LastPointMs uint64   `json:"lastPointMs"`
+	MaxGapMs    uint64   `json:"maxGapMs"`
+}
+
 type subscription struct {
 	series    []string
 	ids       [][]byte
 	positions map[string]int
 	lastSeen  map[string]time.Time
+	maxGap    time.Duration
 }
 
 func (sub *subscription) packRow(
@@ -48,7 +56,7 @@ func (sub *subscription) packRow(
 	if ok {
 		dt := timestamp.Sub(seen)
 		// insert a gap if timestamp delta exceeds threshold
-		if dt > 1200*time.Millisecond { // TODO: configure based on graph, etc
+		if dt > sub.maxGap {
 			addGap()
 		}
 	} else {

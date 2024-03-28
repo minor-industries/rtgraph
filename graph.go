@@ -104,11 +104,11 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) newSubscription(subscribed []string) (*subscription, error) {
+func (g *Graph) newSubscription(req *SubscriptionRequest) (*subscription, error) {
 	positions := map[string]int{}
 
 	var ids [][]byte
-	for idx, sub := range subscribed {
+	for idx, sub := range req.Series {
 		s, ok := g.allSeries[sub]
 		if !ok {
 			return nil, errors.New("unknown series")
@@ -118,10 +118,11 @@ func (g *Graph) newSubscription(subscribed []string) (*subscription, error) {
 	}
 
 	return &subscription{
-		series:    subscribed,
+		series:    req.Series,
 		ids:       ids,
 		positions: positions,
 		lastSeen:  map[string]time.Time{},
+		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
 	}, nil
 }
 
@@ -160,17 +161,19 @@ func (g *Graph) getInitialData(
 }
 
 func (g *Graph) Subscribe(
-	series []string,
-	start time.Time,
-	lastPointMs uint64,
+	req *SubscriptionRequest,
+	now time.Time,
 	callback func(data *messages.Data) error,
 ) {
-	sub, err := g.newSubscription(series)
+	sub, err := g.newSubscription(req)
 	if err != nil {
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
 
-	initialData, err := g.getInitialData(sub, start, lastPointMs)
+	windowSize := time.Duration(req.WindowSize) * time.Millisecond
+	start := now.Add(-windowSize)
+
+	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
 		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
 	}
