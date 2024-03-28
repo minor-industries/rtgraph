@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -51,38 +53,52 @@ func (cs *computedSeries) compute() (float64, bool) {
 	}
 }
 
-func (g *Graph) computeDerivedSeries(reqs []ComputedReq) {
+func (g *Graph) computeDerivedSeries(
+	db *gorm.DB,
+	ch chan error,
+	reqs []ComputedReq,
+) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
 	computedMap := map[string][]*computedSeries{}
 
+	now := time.Now()
 	for _, req := range reqs {
 		cs := newComputedSeries(req.SeriesName, req.Function, req.Seconds)
+		err := cs.loadInitial(db, now)
+		if err != nil {
+			ch <- errors.Wrap(err, "")
+			return
+		}
 		computedMap[cs.inputSeriesName] = append(computedMap[cs.inputSeriesName], cs)
 	}
 
 	for msg := range msgCh {
-		switch m := msg.(type) {
-		case *schema.Series:
-			allCs, ok := computedMap[m.SeriesName]
+		m, ok := msg.(*schema.Series)
+		if !ok {
+			continue
+		}
+
+		allCs, ok := computedMap[m.SeriesName]
+		if !ok {
+			continue
+		}
+
+		for _, cs := range allCs {
+			cs.values.PushBack(m)
+			cs.removeOld(m.Timestamp)
+			value, ok := cs.compute()
 			if !ok {
 				continue
 			}
 
-			for _, cs := range allCs {
-				cs.values.PushBack(m)
-				cs.removeOld(m.Timestamp)
-				value, ok := cs.compute()
-				if ok {
-					g.broker.Publish(&schema.Series{
-						SeriesName: cs.outputSeriesName,
-						Timestamp:  m.Timestamp,
-						Value:      value,
-						SeriesID:   database.HashedID(cs.outputSeriesName),
-					})
-				}
-			}
+			g.broker.Publish(&schema.Series{
+				SeriesName: cs.outputSeriesName,
+				Timestamp:  m.Timestamp,
+				Value:      value,
+				SeriesID:   database.HashedID(cs.outputSeriesName),
+			})
 		}
 	}
 }
@@ -119,4 +135,30 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	}
 
 	return 0, false
+}
+
+func (cs *computedSeries) loadInitial(db *gorm.DB, now time.Time) error {
+	lookBack := -time.Duration(cs.seconds) * time.Second
+	seriesID := database.HashedID(cs.inputSeriesName)
+	window, err := database.LoadDataWindow(
+		db,
+		[][]byte{seriesID},
+		now.Add(lookBack),
+	)
+	if err != nil {
+		return errors.Wrap(err, "load data window")
+	}
+
+	fmt.Printf("loaded %d rows for %s (%s)\n", len(window), cs.outputSeriesName, cs.inputSeriesName)
+
+	for _, value := range window {
+		cs.values.PushBack(&schema.Series{
+			SeriesName: cs.inputSeriesName,
+			Timestamp:  value.Timestamp,
+			Value:      value.Value,
+			SeriesID:   seriesID,
+		})
+	}
+
+	return nil
 }

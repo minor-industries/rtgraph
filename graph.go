@@ -63,7 +63,7 @@ func New(
 	}
 
 	go g.publishPrometheusMetrics()
-	go g.computeDerivedSeries(computed)
+	go g.computeDerivedSeries(db, errCh, computed)
 	go g.dbWriter()
 	go br.Start()
 	//go g.monitorDrops()
