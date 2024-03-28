@@ -4,6 +4,7 @@ import (
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -13,14 +14,14 @@ func (g *Graph) dbWriter() {
 
 	ticker := time.NewTicker(100 * time.Millisecond)
 
-	var values []database.Value
+	var rows []any
 
 	for {
 		select {
 		case msg := <-msgCh:
 			switch m := msg.(type) {
 			case *schema.Series:
-				values = append(values, database.Value{
+				rows = append(rows, database.Value{
 					ID:        database.RandomID(),
 					Timestamp: m.Timestamp,
 					Value:     m.Value,
@@ -28,17 +29,26 @@ func (g *Graph) dbWriter() {
 				})
 			}
 		case <-ticker.C:
-			if len(values) == 0 {
+			if len(rows) == 0 {
 				continue
 			}
 
-			tx := g.db.Create(&values)
-			if tx.Error != nil {
-				g.errCh <- errors.Wrap(tx.Error, "create value")
+			err := g.db.Transaction(func(tx *gorm.DB) error {
+				for _, row := range rows {
+					res := tx.Create(row)
+					if res.Error != nil {
+						return errors.Wrap(res.Error, "create")
+					}
+				}
+				return nil
+			})
+
+			rows = nil
+
+			if err != nil {
+				g.errCh <- errors.Wrap(err, "transaction")
 				return
 			}
-
-			values = nil
 		}
 	}
 }
