@@ -37,15 +37,22 @@ func (sub *subscription) packRow(
 
 	seen, ok := sub.lastSeen[string(seriesID)]
 	sub.lastSeen[string(seriesID)] = timestamp
+
+	addGap := func() {
+		gap := make([]any, len(row))
+		copy(gap, row)
+		gap[pos] = math.NaN()
+		data.Rows = append(data.Rows, gap)
+	}
+
 	if ok {
 		dt := timestamp.Sub(seen)
 		// insert a gap if timestamp delta exceeds threshold
 		if dt > 1200*time.Millisecond { // TODO: configure based on graph, etc
-			gap := make([]any, len(row))
-			copy(gap, row)
-			gap[pos] = math.NaN()
-			data.Rows = append(data.Rows, gap)
+			addGap()
 		}
+	} else {
+		addGap()
 	}
 
 	data.Rows = append(data.Rows, row)

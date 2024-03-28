@@ -15,11 +15,14 @@ func run() error {
 	errCh := make(chan error)
 
 	db := os.ExpandEnv("$HOME/rtgraph-simple.db")
-	if err := os.Remove(db); err != nil {
-		var pathError *fs.PathError
-		ok := errors.As(err, &pathError) && pathError.Err == syscall.ENOENT
-		if !ok {
-			return errors.Wrap(err, "remove db")
+
+	if false {
+		if err := os.Remove(db); err != nil {
+			var pathError *fs.PathError
+			ok := errors.As(err, &pathError) && pathError.Err == syscall.ENOENT
+			if !ok {
+				return errors.Wrap(err, "remove db")
+			}
 		}
 	}
 
