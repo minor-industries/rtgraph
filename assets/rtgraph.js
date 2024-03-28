@@ -142,6 +142,7 @@ class Graph {
         ws.binaryType = "arraybuffer";
 
         ws.onmessage = message => {
+            this.elem.classList.remove("disconnected");
             if (message.data instanceof ArrayBuffer) {
                 let d = msgpack.decode(new Uint8Array(message.data));
 
@@ -183,6 +184,7 @@ class Graph {
 
         ws.onclose = err => {
             console.log("websocket close: " + err);
+            this.elem.classList.add("disconnected");
             this.reconnect();
         }
     }
