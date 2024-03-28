@@ -33,7 +33,7 @@ func run() error {
 			"sample1",
 			"sample2",
 		},
-		[]rtgraph.Computed{
+		[]rtgraph.ComputedReq{
 			{
 				SeriesName: "sample1",
 				Function:   "avg",

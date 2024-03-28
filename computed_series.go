@@ -8,84 +8,104 @@ import (
 	"time"
 )
 
-type Computed struct {
+type ComputedReq struct {
 	SeriesName string
 	Function   string
-	Seconds    int
+	Seconds    uint
 }
 
-func (c *Computed) Name() string {
-	return fmt.Sprintf("%s_%s_%ds", c.SeriesName, c.Function, c.Seconds)
+func (req *ComputedReq) OutputSeriesName() string {
+	return fmt.Sprintf("%s_%s_%ds", req.SeriesName, req.Function, req.Seconds)
 }
 
-func (g *Graph) computeDerivedSeries(computed []Computed) {
+type computedSeries struct {
+	values           *list.List
+	inputSeriesName  string
+	outputSeriesName string
+	seconds          uint
+	fcn              string
+}
+
+func OutputSeriesName(inputSeriesName string, fcn string, seconds uint) string {
+	return fmt.Sprintf("%s_%s_%ds", inputSeriesName, fcn, seconds)
+}
+
+func newComputedSeries(inputSeriesName string, fcn string, seconds uint) *computedSeries {
+	cs := &computedSeries{
+		values:           list.New(),
+		inputSeriesName:  inputSeriesName,
+		outputSeriesName: OutputSeriesName(inputSeriesName, fcn, seconds),
+		seconds:          seconds,
+		fcn:              fcn,
+	}
+
+	return cs
+}
+
+func (cs *computedSeries) compute() (float64, bool) {
+	switch cs.fcn {
+	case "avg":
+		return cs.computeAvg()
+	default:
+		panic("unknown function") // TODO
+	}
+}
+
+func (g *Graph) computeDerivedSeries(reqs []ComputedReq) {
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
-	//values := list.New()
-	valuesMap := map[string]*list.List{}
+	computedMap := map[string][]*computedSeries{}
 
-	computedMap := map[string][]Computed{}
-	for _, c := range computed {
-		computedMap[c.SeriesName] = append(computedMap[c.SeriesName], c)
+	for _, req := range reqs {
+		cs := newComputedSeries(req.SeriesName, req.Function, req.Seconds)
+		computedMap[cs.inputSeriesName] = append(computedMap[cs.inputSeriesName], cs)
 	}
 
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			cs_, ok := computedMap[m.SeriesName]
+			allCs, ok := computedMap[m.SeriesName]
 			if !ok {
 				continue
 			}
 
-			for _, c := range cs_ {
-				computedName := c.Name()
-				if _, ok := valuesMap[computedName]; !ok {
-					valuesMap[computedName] = list.New()
-				}
-
-				values := valuesMap[computedName]
-
-				values.PushBack(m)
-				dt := -time.Duration(c.Seconds) * time.Second
-				removeOld(values, m.Timestamp.Add(dt))
-
-				switch c.Function {
-				case "avg":
-					avg, ok := computeAvg(values)
-					if ok {
-						seriesName := computedName
-						g.broker.Publish(&schema.Series{
-							SeriesName: seriesName,
-							Timestamp:  m.Timestamp,
-							Value:      avg,
-							SeriesID:   database.HashedID(seriesName),
-						})
-					}
-				default:
-					panic(fmt.Errorf("unknown function %s", c.Function))
+			for _, cs := range allCs {
+				cs.values.PushBack(m)
+				cs.removeOld(m.Timestamp)
+				value, ok := cs.compute()
+				if ok {
+					g.broker.Publish(&schema.Series{
+						SeriesName: cs.outputSeriesName,
+						Timestamp:  m.Timestamp,
+						Value:      value,
+						SeriesID:   database.HashedID(cs.outputSeriesName),
+					})
 				}
 			}
 		}
 	}
 }
 
-func removeOld(values *list.List, cutoff time.Time) {
+func (cs *computedSeries) removeOld(now time.Time) {
+	dt := -time.Duration(cs.seconds) * time.Second
+	cutoff := now.Add(dt)
+
 	for {
-		e := values.Front()
+		e := cs.values.Front()
 		v := e.Value.(*schema.Series)
 		if v.Timestamp.Before(cutoff) {
-			values.Remove(e)
+			cs.values.Remove(e)
 		} else {
 			break
 		}
 	}
 }
 
-func computeAvg(values *list.List) (float64, bool) {
+func (cs *computedSeries) computeAvg() (float64, bool) {
 	sum := 0.0
 	count := 0
-	for e := values.Front(); e != nil; e = e.Next() {
+	for e := cs.values.Front(); e != nil; e = e.Next() {
 		v := e.Value.(*schema.Series)
 		if v.Value == 0 { // ignore zeros in the calculation
 			continue

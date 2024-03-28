@@ -27,7 +27,7 @@ func New(
 	dbPath string,
 	errCh chan error,
 	seriesNames []string,
-	computed []Computed,
+	computed []ComputedReq,
 ) (*Graph, error) {
 	db, err := database.Get(dbPath)
 	if err != nil {
@@ -35,7 +35,7 @@ func New(
 	}
 
 	for _, c := range computed {
-		seriesNames = append(seriesNames, c.Name())
+		seriesNames = append(seriesNames, c.OutputSeriesName())
 	}
 
 	allSeries, err := database.LoadAllSeries(db, seriesNames)
