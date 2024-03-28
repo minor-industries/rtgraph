@@ -1,0 +1,15 @@
+.wide {
+    width: 97.5%;
+    margin-bottom: 10px;
+}
+
+.container {
+    display: flex;
+}
+
+.column {
+    flex: 1;
+    margin-bottom: 10px;
+    margin-right: 20px;
+}
+

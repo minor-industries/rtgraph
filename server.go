@@ -27,11 +27,13 @@ func (g *Graph) setupServer() error {
 	})
 
 	g.StaticFiles(assets.FS,
-		"dygraph.min.js", "application/javascript",
 		"dygraph.css", "text/css",
+		"rtgraph.css", "text/css",
 
-		"graphs.js", "application/javascript",
+		"dygraph.min.js", "application/javascript",
 		"msgpack.min.js", "application/javascript",
+
+		"rtgraph.js", "application/javascript",
 	)
 
 	r.GET("/ws", func(c *gin.Context) {
