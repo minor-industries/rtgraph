@@ -61,12 +61,18 @@ func New(
 	}
 
 	br := broker.NewBroker()
+
+	server := gin.New()
+	server.Use(gin.Recovery())
+	skipLogging := []string{"/metrics"}
+	server.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogging...))
+
 	g := &Graph{
 		broker:    br,
 		db:        db,
 		allSeries: allSeries,
 		errCh:     errCh,
-		server:    gin.Default(),
+		server:    server,
 	}
 
 	if err := g.setupServer(); err != nil {
