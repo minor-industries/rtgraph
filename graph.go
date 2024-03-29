@@ -75,9 +75,8 @@ func New(
 	return g, nil
 }
 
-// DB is temporary
-func (g *Graph) DB() *gorm.DB {
-	return g.db
+func (g *Graph) DBWriter() *database.DBWriter {
+	return g.dbWriter
 }
 
 func (g *Graph) GetEngine() *gin.Engine {
