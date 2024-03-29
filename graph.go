@@ -14,13 +14,15 @@ import (
 )
 
 type Graph struct {
-	db          *gorm.DB
+	db_         *gorm.DB
 	seriesNames []string
 	errCh       chan error
 
 	broker    *broker.Broker
 	allSeries map[string]*database.Series
 	server    *gin.Engine
+	dbWriter  *database.DBWriter
+	db        *gorm.DB
 }
 
 func New(
@@ -56,6 +58,7 @@ func New(
 		allSeries: allSeries,
 		errCh:     errCh,
 		server:    server,
+		dbWriter:  database.NewDBWriter(db, errCh, 100),
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -64,7 +67,8 @@ func New(
 
 	go g.publishPrometheusMetrics()
 	go g.computeDerivedSeries(db, errCh, computed)
-	go g.dbWriter()
+	go g.dbWriter.Run()
+	go g.publishToDB()
 	go br.Start()
 	//go g.monitorDrops()
 
