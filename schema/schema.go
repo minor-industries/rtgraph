@@ -2,6 +2,7 @@ package schema
 
 import "time"
 
+// TODO: should this be "Value"?
 type Series struct {
 	SeriesName string
 	Timestamp  time.Time

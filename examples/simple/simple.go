@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/minor-industries/rtgraph"
+	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
 	"io/fs"
@@ -14,10 +15,10 @@ import (
 func run() error {
 	errCh := make(chan error)
 
-	db := os.ExpandEnv("$HOME/rtgraph-simple.db")
+	dbPath := os.ExpandEnv("$HOME/rtgraph-simple.db")
 
 	if false {
-		if err := os.Remove(db); err != nil {
+		if err := os.Remove(dbPath); err != nil {
 			var pathError *fs.PathError
 			ok := errors.As(err, &pathError) && pathError.Err == syscall.ENOENT
 			if !ok {
@@ -26,8 +27,13 @@ func run() error {
 		}
 	}
 
+	db, err := database.Get(dbPath)
+	if err != nil {
+		return errors.Wrap(err, "get database")
+	}
+
 	graph, err := rtgraph.New(
-		db,
+		&database.Backend{DB: db},
 		errCh,
 		[]string{
 			"sample1",

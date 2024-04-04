@@ -3,10 +3,9 @@ package rtgraph
 import (
 	"container/list"
 	"fmt"
-	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
+	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"time"
 )
 
@@ -54,7 +53,7 @@ func (cs *computedSeries) compute() (float64, bool) {
 }
 
 func (g *Graph) computeDerivedSeries(
-	db *gorm.DB,
+	backend storage.StorageBackend,
 	ch chan error,
 	reqs []ComputedReq,
 ) {
@@ -66,7 +65,7 @@ func (g *Graph) computeDerivedSeries(
 	now := time.Now()
 	for _, req := range reqs {
 		cs := newComputedSeries(req.SeriesName, req.Function, req.Seconds)
-		err := cs.loadInitial(db, now)
+		err := cs.loadInitial(backend, now)
 		if err != nil {
 			ch <- errors.Wrap(err, "")
 			return
@@ -136,10 +135,9 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	return 0, false
 }
 
-func (cs *computedSeries) loadInitial(db *gorm.DB, now time.Time) error {
+func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) error {
 	lookBack := -time.Duration(cs.seconds) * time.Second
-	window, err := database.LoadDataWindow(
-		db,
+	window, err := db.LoadDataWindow(
 		[]string{cs.inputSeriesName},
 		now.Add(lookBack),
 	)

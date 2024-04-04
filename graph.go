@@ -8,39 +8,32 @@ import (
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
+	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"time"
 )
 
 type Graph struct {
-	db_         *gorm.DB
 	seriesNames []string
 	errCh       chan error
 
-	broker    *broker.Broker
-	allSeries map[string]*database.Series
-	server    *gin.Engine
-	dbWriter  *database.DBWriter
-	db        *gorm.DB
+	broker   *broker.Broker
+	server   *gin.Engine
+	dbWriter *database.DBWriter
+	db       storage.StorageBackend
 }
 
 func New(
-	dbPath string,
+	backend storage.StorageBackend,
 	errCh chan error,
 	seriesNames []string,
 	computed []ComputedReq,
 ) (*Graph, error) {
-	db, err := database.Get(dbPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "get database")
-	}
-
 	for _, c := range computed {
 		seriesNames = append(seriesNames, c.OutputSeriesName())
 	}
 
-	allSeries, err := database.LoadAllSeries(db, seriesNames)
+	err := backend.CreateSeries(seriesNames)
 	if err != nil {
 		return nil, errors.Wrap(err, "load series")
 	}
@@ -53,12 +46,11 @@ func New(
 	server.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogging...))
 
 	g := &Graph{
-		broker:    br,
-		db:        db,
-		allSeries: allSeries,
-		errCh:     errCh,
-		server:    server,
-		dbWriter:  database.NewDBWriter(db, errCh, 100),
+		broker:   br,
+		db:       backend,
+		errCh:    errCh,
+		server:   server,
+		dbWriter: database.NewDBWriter(backend, errCh, 100),
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -66,7 +58,7 @@ func New(
 	}
 
 	go g.publishPrometheusMetrics()
-	go g.computeDerivedSeries(db, errCh, computed)
+	go g.computeDerivedSeries(backend, errCh, computed)
 	go g.dbWriter.Run()
 	go g.publishToDB()
 	go br.Start()
@@ -88,9 +80,7 @@ func (g *Graph) CreateValue(
 	timestamp time.Time,
 	value float64,
 ) error {
-	if _, ok := g.allSeries[seriesName]; !ok {
-		return fmt.Errorf("unknown database series: %s", seriesName)
-	}
+	// TODO: do we need to ensure the series exists?
 
 	g.broker.Publish(&schema.Series{
 		SeriesName: seriesName,
@@ -125,7 +115,7 @@ func (g *Graph) getInitialData(
 	windowStart time.Time,
 	lastPointMs uint64,
 ) (*messages.Data, error) {
-	var data []database.Value
+	var data []schema.Series
 	var err error
 
 	start := windowStart // by default
@@ -137,7 +127,7 @@ func (g *Graph) getInitialData(
 		}
 	}
 
-	data, err = database.LoadDataWindow(g.db, sub.seriesNames, start)
+	data, err = g.db.LoadDataWindow(sub.seriesNames, start)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
@@ -145,7 +135,7 @@ func (g *Graph) getInitialData(
 
 	rows := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		err := sub.packRow(rows, d.Series.Name, d.Timestamp, d.Value)
+		err := sub.packRow(rows, d.SeriesName, d.Timestamp, d.Value)
 		if err != nil {
 			return nil, err
 		}

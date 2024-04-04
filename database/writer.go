@@ -1,19 +1,19 @@
 package database
 
 import (
+	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
-	"gorm.io/gorm"
 	"time"
 )
 
 type DBWriter struct {
 	errCh   chan error
 	objects chan any
-	db      *gorm.DB
+	db      storage.StorageBackend
 }
 
 func NewDBWriter(
-	db *gorm.DB,
+	db storage.StorageBackend,
 	errCh chan error,
 	bufSize int,
 ) *DBWriter {
@@ -42,16 +42,7 @@ func (w *DBWriter) Run() {
 				continue
 			}
 
-			err := w.db.Transaction(func(tx *gorm.DB) error {
-				for _, row := range rows {
-					res := tx.Create(row)
-					if res.Error != nil {
-						return errors.Wrap(res.Error, "create")
-					}
-				}
-				return nil
-			})
-
+			err := w.db.Insert(rows)
 			rows = nil
 
 			if err != nil {
