@@ -1,7 +1,6 @@
 package rtgraph
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/minor-industries/rtgraph/messages"
 	"math"
@@ -16,35 +15,34 @@ type SubscriptionRequest struct {
 }
 
 type subscription struct {
-	series    []string
-	ids       [][]byte
-	positions map[string]int
-	lastSeen  map[string]time.Time
-	maxGap    time.Duration
+	seriesNames []string
+	positions   map[string]int
+	lastSeen    map[string]time.Time
+	maxGap      time.Duration
 }
 
 func (sub *subscription) packRow(
 	data *messages.Data,
-	seriesID []byte,
+	seriesName string,
 	timestamp time.Time,
 	value float64,
 ) error {
-	row := make([]any, len(sub.series)+1)
+	row := make([]any, len(sub.seriesNames)+1)
 	row[0] = timestamp.UnixMilli()
 
 	// first fill with nils
-	for i := 0; i < len(sub.series); i++ {
+	for i := 0; i < len(sub.seriesNames); i++ {
 		row[i+1] = nil
 	}
 
-	pos, ok := sub.positions[string(seriesID)]
+	pos, ok := sub.positions[seriesName]
 	if !ok {
-		return fmt.Errorf("found value %s with unknown series", hex.EncodeToString(seriesID))
+		return fmt.Errorf("found value with unknown series: %s", seriesName)
 	}
 	row[pos] = floatP(float32(value))
 
-	seen, ok := sub.lastSeen[string(seriesID)]
-	sub.lastSeen[string(seriesID)] = timestamp
+	seen, ok := sub.lastSeen[seriesName]
+	sub.lastSeen[seriesName] = timestamp
 
 	addGap := func() {
 		gap := make([]any, len(row))

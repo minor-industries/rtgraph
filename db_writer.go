@@ -1,9 +1,20 @@
 package rtgraph
 
 import (
+	"crypto/sha256"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
 )
+
+// TODO: we're leaking a database abstraction here
+func hashedID(s string) []byte {
+	var result [16]byte
+	h := sha256.New()
+	h.Write([]byte(s))
+	sum := h.Sum(nil)
+	copy(result[:], sum[:16])
+	return result[:]
+}
 
 func (g *Graph) publishToDB() {
 	msgCh := g.broker.Subscribe()
@@ -16,7 +27,7 @@ func (g *Graph) publishToDB() {
 				ID:        database.RandomID(),
 				Timestamp: m.Timestamp,
 				Value:     m.Value,
-				SeriesID:  m.SeriesID,
+				SeriesID:  hashedID(m.SeriesName), // TODO: this seems bad. Perhaps provide a constructor that does this for us and don't allow using the struct form
 			})
 		}
 	}

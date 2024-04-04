@@ -97,7 +97,6 @@ func (g *Graph) computeDerivedSeries(
 				SeriesName: cs.outputSeriesName,
 				Timestamp:  m.Timestamp,
 				Value:      value,
-				SeriesID:   database.HashedID(cs.outputSeriesName),
 			})
 		}
 	}
@@ -139,10 +138,9 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 
 func (cs *computedSeries) loadInitial(db *gorm.DB, now time.Time) error {
 	lookBack := -time.Duration(cs.seconds) * time.Second
-	seriesID := database.HashedID(cs.inputSeriesName)
 	window, err := database.LoadDataWindow(
 		db,
-		[][]byte{seriesID},
+		[]string{cs.inputSeriesName},
 		now.Add(lookBack),
 	)
 	if err != nil {
@@ -156,7 +154,6 @@ func (cs *computedSeries) loadInitial(db *gorm.DB, now time.Time) error {
 			SeriesName: cs.inputSeriesName,
 			Timestamp:  value.Timestamp,
 			Value:      value.Value,
-			SeriesID:   seriesID,
 		})
 	}
 

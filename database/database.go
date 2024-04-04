@@ -37,7 +37,7 @@ func RandomID() []byte {
 	return result[:]
 }
 
-func HashedID(s string) []byte {
+func hashedID(s string) []byte {
 	var result [16]byte
 	h := sha256.New()
 	h.Write([]byte(s))
@@ -60,7 +60,7 @@ func LoadAllSeries(
 			continue
 		}
 		db.Create(&Series{
-			ID:   HashedID(name),
+			ID:   hashedID(name),
 			Name: name,
 			Unit: "",
 		})
@@ -88,14 +88,19 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 
 func LoadDataWindow(
 	db *gorm.DB,
-	series [][]byte,
+	seriesNames []string,
 	start time.Time,
 ) ([]Value, error) {
 	var result []Value
 
-	tx := db.Where(
+	seriesIDs := make([][]byte, len(seriesNames))
+	for i, name := range seriesNames {
+		seriesIDs[i] = hashedID(name)
+	}
+
+	tx := db.Preload("Series").Where(
 		"series_id IN ? and timestamp >= ?",
-		series,
+		seriesIDs,
 		start,
 	).Order("timestamp asc").Find(&result)
 	if tx.Error != nil {

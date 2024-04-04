@@ -6,7 +6,6 @@ type Series struct {
 	SeriesName string
 	Timestamp  time.Time
 	Value      float64
-	SeriesID   []byte
 }
 
 func (s *Series) Name() string {

@@ -88,8 +88,7 @@ func (g *Graph) CreateValue(
 	timestamp time.Time,
 	value float64,
 ) error {
-	series, ok := g.allSeries[seriesName]
-	if !ok {
+	if _, ok := g.allSeries[seriesName]; !ok {
 		return fmt.Errorf("unknown database series: %s", seriesName)
 	}
 
@@ -97,7 +96,6 @@ func (g *Graph) CreateValue(
 		SeriesName: seriesName,
 		Timestamp:  timestamp,
 		Value:      value,
-		SeriesID:   series.ID,
 	})
 
 	return nil
@@ -110,22 +108,15 @@ func floatP(v float32) *float32 {
 func (g *Graph) newSubscription(req *SubscriptionRequest) (*subscription, error) {
 	positions := map[string]int{}
 
-	var ids [][]byte
-	for idx, sub := range req.Series {
-		s, ok := g.allSeries[sub]
-		if !ok {
-			return nil, errors.New("unknown series")
-		}
-		positions[string(s.ID)] = idx + 1
-		ids = append(ids, s.ID)
+	for idx, seriesName := range req.Series {
+		positions[seriesName] = idx + 1
 	}
 
 	return &subscription{
-		series:    req.Series,
-		ids:       ids,
-		positions: positions,
-		lastSeen:  map[string]time.Time{},
-		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
+		seriesNames: req.Series,
+		positions:   positions,
+		lastSeen:    map[string]time.Time{},
+		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
 	}, nil
 }
 
@@ -146,7 +137,7 @@ func (g *Graph) getInitialData(
 		}
 	}
 
-	data, err = database.LoadDataWindow(g.db, sub.ids, start)
+	data, err = database.LoadDataWindow(g.db, sub.seriesNames, start)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
@@ -154,7 +145,7 @@ func (g *Graph) getInitialData(
 
 	rows := &messages.Data{Rows: []any{}}
 	for _, d := range data {
-		err := sub.packRow(rows, d.SeriesID, d.Timestamp, d.Value)
+		err := sub.packRow(rows, d.Series.Name, d.Timestamp, d.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -190,13 +181,13 @@ func (g *Graph) Subscribe(
 	msgCh := g.broker.Subscribe()
 	defer g.broker.Unsubscribe(msgCh)
 
-	allSeries := set.FromSlice(sub.series)
+	allSeries := set.FromSlice(sub.seriesNames)
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
 			if allSeries.Has(m.SeriesName) {
 				data := &messages.Data{Rows: []interface{}{}}
-				err := sub.packRow(data, database.HashedID(m.SeriesName), m.Timestamp, m.Value)
+				err := sub.packRow(data, m.SeriesName, m.Timestamp, m.Value)
 				if err != nil {
 					panic(err) // TODO
 				}
