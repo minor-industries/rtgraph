@@ -88,6 +88,7 @@ func (g *Graph) CreateValue(
 			Timestamp: timestamp,
 			Value:     value,
 		}},
+		Persisted: true,
 	})
 
 	return nil

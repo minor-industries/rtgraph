@@ -10,6 +10,7 @@ type Value struct {
 type Series struct {
 	SeriesName string
 	Values     []Value
+	Persisted  bool
 }
 
 func (s Series) Name() string {
