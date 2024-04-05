@@ -21,6 +21,7 @@ type Graph struct {
 	server   *gin.Engine
 	dbWriter *database.DBWriter
 	db       storage.StorageBackend
+	computed map[string]ComputedReq
 }
 
 func New(
@@ -51,6 +52,11 @@ func New(
 		errCh:    errCh,
 		server:   server,
 		dbWriter: database.NewDBWriter(backend, errCh, 100),
+		computed: map[string]ComputedReq{},
+	}
+
+	for _, req := range computed {
+		g.computed[req.OutputSeriesName()] = req
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -58,7 +64,7 @@ func New(
 	}
 
 	go g.publishPrometheusMetrics()
-	go g.computeDerivedSeries(backend, errCh, computed)
+	//go g.computeDerivedSeries(backend, errCh, computed)
 	go g.dbWriter.Run()
 	go g.publishToDB()
 	go br.Start()
@@ -212,6 +218,13 @@ func (g *Graph) Subscribe(
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
 	start := now.Add(-windowSize)
 
+	/*
+		Need two things: initial, plus streaming
+		Need a goroutine to produce values
+	*/
+
+	seriesCh := make(chan schema.Series)
+
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
 		_ = callback(&messages.Data{
@@ -226,28 +239,37 @@ func (g *Graph) Subscribe(
 		return
 	}
 
-	msgCh := g.broker.Subscribe()
-	defer g.broker.Unsubscribe(msgCh)
+	// TODO: need to close all these channels, etc
 
-	allSeries := set.FromSlice(sub.seriesNames)
-	for msg := range msgCh {
-		switch m := msg.(type) {
-		case schema.Series:
-			if !allSeries.Has(m.SeriesName) {
+	go func() {
+		allSeries := set.FromSlice(sub.seriesNames)
+		msgCh := g.broker.Subscribe()
+		defer g.broker.Unsubscribe(msgCh)
+
+		for m := range msgCh {
+			msg, ok := m.(schema.Series)
+			if !ok {
 				continue
 			}
 
-			for _, v := range m.Values {
-				data := &messages.Data{Rows: []interface{}{}}
-				err := sub.packRow(data, m.SeriesName, v.Timestamp, v.Value)
-				if err != nil {
-					panic(err) // TODO
-				}
+			if !allSeries.Has(msg.SeriesName) {
+				continue
+			}
 
-				if err := callback(data); err != nil {
-					fmt.Println(errors.Wrap(err, "callback error"))
-					return
-				}
+			seriesCh <- msg
+		}
+	}()
+
+	for series := range seriesCh {
+		for _, v := range series.Values {
+			data := &messages.Data{Rows: []interface{}{}}
+			err := sub.packRow(data, series.SeriesName, v.Timestamp, v.Value)
+			if err != nil {
+				panic(err) // TODO
+			}
+			if err := callback(data); err != nil {
+				fmt.Println(errors.Wrap(err, "callback error"))
+				return
 			}
 		}
 	}
