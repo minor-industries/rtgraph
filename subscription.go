@@ -25,6 +25,7 @@ type subscription struct {
 	maxGap      time.Duration
 	allSeries   set.Set[string]
 	computedMap map[string][]*computedSeries
+	allComputed []*computedSeries
 }
 
 func newSubscription(
@@ -43,7 +44,7 @@ func newSubscription(
 		positions:   positions,
 		lastSeen:    map[string]time.Time{},
 		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
-		computedMap: map[string][]*computedSeries{},
+		computedMap: map[string][]*computedSeries{}, // key: input series name
 	}
 
 	for _, c := range computed {
@@ -57,18 +58,17 @@ func newSubscription(
 		)
 		inName := c.InputSeriesName()
 		sub.computedMap[inName] = append(sub.computedMap[inName], cs)
+		sub.allComputed = append(sub.allComputed, cs)
 	}
 
 	return sub
 }
 
 func (sub *subscription) loadInitial(db storage.StorageBackend, now time.Time) error {
-	for _, css := range sub.computedMap {
-		for _, cs := range css {
-			err := cs.loadInitial(db, now)
-			if err != nil {
-				return errors.Wrap(err, "load initial")
-			}
+	for _, cs := range sub.allComputed {
+		err := cs.loadInitial(db, now)
+		if err != nil {
+			return errors.Wrap(err, "load initial")
 		}
 	}
 	return nil
