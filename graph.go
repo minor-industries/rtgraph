@@ -150,6 +150,7 @@ func interleave(
 	allSeries []schema.Series,
 	f func(seriesName string, value schema.Value) error,
 ) error {
+	// TODO: interleave could use some tests!
 	indices := make([]int, len(allSeries))
 
 	remaining := 0

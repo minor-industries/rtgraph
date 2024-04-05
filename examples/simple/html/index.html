@@ -17,11 +17,11 @@
         Dygraph.onDOMready(function onDOMready() {
             new Graph(document.getElementById("graphdiv0"), {
                 // seriesNames: ["sample1", "sample1_avg_30s", "sample2"],
-                seriesNames: ["sample1"],
+                seriesNames: ["sample1", "sample2"],
                 title: "Sample Series: {value}",
                 height: 300,
                 windowSize: minute,
-                labels: ["x", "Y1"],
+                labels: ["x", "Y1", "Y2"],
                 mappers: [x => x * 10.0],
                 series: {
                     Y1: {
