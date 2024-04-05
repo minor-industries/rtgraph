@@ -101,9 +101,10 @@ func (g *Graph) computeDerivedSeries(
 				}
 			}
 
-			g.broker.Publish(&schema.Series{
+			g.broker.Publish(schema.Series{
 				SeriesName: cs.outputSeriesName,
 				Values:     outValues,
+				Persisted:  false,
 			})
 		}
 	}
@@ -144,24 +145,23 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 }
 
 func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) error {
-	return errors.New("not implemented")
-	//lookBack := -time.Duration(cs.seconds) * time.Second
-	//window, err := db.LoadDataWindow(
-	//	[]string{cs.inputSeriesName},
-	//	now.Add(lookBack),
-	//)
-	//if err != nil {
-	//	return errors.Wrap(err, "load data window")
-	//}
-	//
-	//fmt.Printf("loaded %d rows for %s (%s)\n", len(window), cs.outputSeriesName, cs.inputSeriesName)
-	//
-	//for _, value := range window {
-	//	cs.values.PushBack(schema.Value{
-	//		Timestamp: value.Timestamp,
-	//		Value:     value.Value,
-	//	})
-	//}
-	//
-	//return nil
+	lookBack := -time.Duration(cs.seconds) * time.Second
+	window, err := db.LoadDataWindow(
+		cs.inputSeriesName,
+		now.Add(lookBack),
+	)
+	if err != nil {
+		return errors.Wrap(err, "load data window")
+	}
+
+	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.outputSeriesName, cs.inputSeriesName)
+
+	for _, value := range window.Values {
+		cs.values.PushBack(schema.Value{
+			Timestamp: value.Timestamp,
+			Value:     value.Value,
+		})
+	}
+
+	return nil
 }
