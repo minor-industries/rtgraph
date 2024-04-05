@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"net/http"
 	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 	"time"
 )
 
@@ -66,12 +65,6 @@ func (g *Graph) setupServer() error {
 		}
 
 		now := time.Now()
-		if err := wsjson.Write(ctx, conn, map[string]any{
-			"now": now.UnixMilli(),
-		}); err != nil {
-			fmt.Println(errors.Wrap(err, "write timestamp"))
-			return
-		}
 
 		g.Subscribe(&req, now, func(data *messages.Data) error {
 			binmsg, err := data.MarshalMsg(nil)

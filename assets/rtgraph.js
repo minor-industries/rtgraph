@@ -144,22 +144,21 @@ class Graph {
         ws.onmessage = message => {
             this.elem.classList.remove("disconnected");
             if (message.data instanceof ArrayBuffer) {
-                let d = msgpack.decode(new Uint8Array(message.data));
+                const msg = msgpack.decode(new Uint8Array(message.data));
 
-                this.update(d.rows);
-                return;
-            }
+                if (msg.error !== undefined) {
+                    alert(msg.error);
+                    return;
+                }
 
-            const msg = JSON.parse(message.data);
+                if (msg.now !== undefined) {
+                    // handle case when client and server times don't match
+                    this.setDate(new Date(msg.now));
+                }
 
-            if (msg.error !== undefined) {
-                alert(msg.error);
-                return;
-            }
-
-            if (msg.now !== undefined) {
-                // handle case when client and server times don't match
-                this.setDate(new Date(msg.now));
+                if (msg.rows !== undefined) {
+                    this.update(msg.rows);
+                }
             }
         };
 

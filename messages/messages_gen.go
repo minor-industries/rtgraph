@@ -43,6 +43,18 @@ func (z *Data) DecodeMsg(dc *msgp.Reader) (err error) {
 					return
 				}
 			}
+		case "error":
+			z.Error, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "Error")
+				return
+			}
+		case "now":
+			z.Now, err = dc.ReadUint64()
+			if err != nil {
+				err = msgp.WrapError(err, "Now")
+				return
+			}
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -56,21 +68,70 @@ func (z *Data) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *Data) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 1
-	// write "rows"
-	err = en.Append(0x81, 0xa4, 0x72, 0x6f, 0x77, 0x73)
+	// omitempty: check for empty values
+	zb0001Len := uint32(3)
+	var zb0001Mask uint8 /* 3 bits */
+	_ = zb0001Mask
+	if z.Rows == nil {
+		zb0001Len--
+		zb0001Mask |= 0x1
+	}
+	if z.Error == "" {
+		zb0001Len--
+		zb0001Mask |= 0x2
+	}
+	if z.Now == 0 {
+		zb0001Len--
+		zb0001Mask |= 0x4
+	}
+	// variable map header, size zb0001Len
+	err = en.Append(0x80 | uint8(zb0001Len))
 	if err != nil {
 		return
 	}
-	err = en.WriteArrayHeader(uint32(len(z.Rows)))
-	if err != nil {
-		err = msgp.WrapError(err, "Rows")
+	if zb0001Len == 0 {
 		return
 	}
-	for za0001 := range z.Rows {
-		err = en.WriteIntf(z.Rows[za0001])
+	if (zb0001Mask & 0x1) == 0 { // if not empty
+		// write "rows"
+		err = en.Append(0xa4, 0x72, 0x6f, 0x77, 0x73)
 		if err != nil {
-			err = msgp.WrapError(err, "Rows", za0001)
+			return
+		}
+		err = en.WriteArrayHeader(uint32(len(z.Rows)))
+		if err != nil {
+			err = msgp.WrapError(err, "Rows")
+			return
+		}
+		for za0001 := range z.Rows {
+			err = en.WriteIntf(z.Rows[za0001])
+			if err != nil {
+				err = msgp.WrapError(err, "Rows", za0001)
+				return
+			}
+		}
+	}
+	if (zb0001Mask & 0x2) == 0 { // if not empty
+		// write "error"
+		err = en.Append(0xa5, 0x65, 0x72, 0x72, 0x6f, 0x72)
+		if err != nil {
+			return
+		}
+		err = en.WriteString(z.Error)
+		if err != nil {
+			err = msgp.WrapError(err, "Error")
+			return
+		}
+	}
+	if (zb0001Mask & 0x4) == 0 { // if not empty
+		// write "now"
+		err = en.Append(0xa3, 0x6e, 0x6f, 0x77)
+		if err != nil {
+			return
+		}
+		err = en.WriteUint64(z.Now)
+		if err != nil {
+			err = msgp.WrapError(err, "Now")
 			return
 		}
 	}
@@ -80,16 +141,48 @@ func (z *Data) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *Data) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 1
-	// string "rows"
-	o = append(o, 0x81, 0xa4, 0x72, 0x6f, 0x77, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Rows)))
-	for za0001 := range z.Rows {
-		o, err = msgp.AppendIntf(o, z.Rows[za0001])
-		if err != nil {
-			err = msgp.WrapError(err, "Rows", za0001)
-			return
+	// omitempty: check for empty values
+	zb0001Len := uint32(3)
+	var zb0001Mask uint8 /* 3 bits */
+	_ = zb0001Mask
+	if z.Rows == nil {
+		zb0001Len--
+		zb0001Mask |= 0x1
+	}
+	if z.Error == "" {
+		zb0001Len--
+		zb0001Mask |= 0x2
+	}
+	if z.Now == 0 {
+		zb0001Len--
+		zb0001Mask |= 0x4
+	}
+	// variable map header, size zb0001Len
+	o = append(o, 0x80|uint8(zb0001Len))
+	if zb0001Len == 0 {
+		return
+	}
+	if (zb0001Mask & 0x1) == 0 { // if not empty
+		// string "rows"
+		o = append(o, 0xa4, 0x72, 0x6f, 0x77, 0x73)
+		o = msgp.AppendArrayHeader(o, uint32(len(z.Rows)))
+		for za0001 := range z.Rows {
+			o, err = msgp.AppendIntf(o, z.Rows[za0001])
+			if err != nil {
+				err = msgp.WrapError(err, "Rows", za0001)
+				return
+			}
 		}
+	}
+	if (zb0001Mask & 0x2) == 0 { // if not empty
+		// string "error"
+		o = append(o, 0xa5, 0x65, 0x72, 0x72, 0x6f, 0x72)
+		o = msgp.AppendString(o, z.Error)
+	}
+	if (zb0001Mask & 0x4) == 0 { // if not empty
+		// string "now"
+		o = append(o, 0xa3, 0x6e, 0x6f, 0x77)
+		o = msgp.AppendUint64(o, z.Now)
 	}
 	return
 }
@@ -131,6 +224,18 @@ func (z *Data) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "error":
+			z.Error, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Error")
+				return
+			}
+		case "now":
+			z.Now, bts, err = msgp.ReadUint64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Now")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -149,5 +254,6 @@ func (z *Data) Msgsize() (s int) {
 	for za0001 := range z.Rows {
 		s += msgp.GuessSize(z.Rows[za0001])
 	}
+	s += 6 + msgp.StringPrefixSize + len(z.Error) + 4 + msgp.Uint64Size
 	return
 }

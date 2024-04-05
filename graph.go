@@ -149,9 +149,19 @@ func (g *Graph) Subscribe(
 	now time.Time,
 	callback func(data *messages.Data) error,
 ) {
+	if err := callback(&messages.Data{
+		Now: uint64(now.UnixMilli()),
+	}); err != nil {
+		fmt.Println(errors.Wrap(err, "callback error"))
+		return
+	}
+
 	sub, err := g.newSubscription(req)
 	if err != nil {
-		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
+		_ = callback(&messages.Data{
+			Error: errors.Wrap(err, "new subscription").Error(),
+		})
+		return
 	}
 
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
@@ -159,7 +169,10 @@ func (g *Graph) Subscribe(
 
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
-		panic(err) // TODO: return error to ws client and maybe log. Need to generate a msgpack message with an error field
+		_ = callback(&messages.Data{
+			Error: errors.Wrap(err, "get initial data").Error(),
+		})
+		return
 	}
 
 	err = callback(initialData)
