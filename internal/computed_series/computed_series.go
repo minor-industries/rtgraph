@@ -90,9 +90,14 @@ func (cs *ComputedSeries) computeAvg() (float64, bool) {
 	return 0, false
 }
 
-func (cs *ComputedSeries) LoadInitial(db storage.StorageBackend, start time.Time) (schema.Series, error) {
+func (cs *ComputedSeries) LoadInitial(
+	db storage.StorageBackend,
+	start time.Time,
+	now time.Time,
+) (schema.Series, error) {
 	// TODO: LoadInitial could use some tests
 	lookBack := -time.Duration(cs.seconds) * time.Second
+	historyCutoff := now.Add(lookBack)
 	window, err := db.LoadDataWindow(
 		cs.InputSeriesName,
 		start.Add(lookBack),
@@ -123,11 +128,12 @@ func (cs *ComputedSeries) LoadInitial(db storage.StorageBackend, start time.Time
 			count--
 			sum -= bgnPt.Value
 		}
+		if endPt.Timestamp.After(historyCutoff) {
+			// TODO: I don't like how we're mixing this in here
+			cs.values.PushBack(endPt)
+		}
 		if endPt.Timestamp.Before(start) {
 			continue
-		}
-		if count == 0 {
-			panic("didn't expect this")
 		}
 		value := sum / float64(count)
 		result = append(result, schema.Value{

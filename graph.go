@@ -118,7 +118,7 @@ func (g *Graph) Subscribe(
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
 	start := now.Add(-windowSize)
 
-	initialData, err := sub.GetInitialData(g.db, start, req.LastPointMs)
+	initialData, err := sub.GetInitialData(g.db, start, now, req.LastPointMs)
 	if err != nil {
 		_ = callback(&messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),

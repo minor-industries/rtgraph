@@ -64,6 +64,7 @@ func NewSubscription(
 func (sub *Subscription) GetInitialData(
 	db storage.StorageBackend,
 	windowStart time.Time,
+	now time.Time,
 	lastPointMs uint64,
 ) (*messages.Data, error) {
 	start := windowStart // by default
@@ -85,7 +86,7 @@ func (sub *Subscription) GetInitialData(
 		var err error
 		// TODO: we should have better dispatch here, e.g., through an interface
 		if cs, ok := computedMap[name]; ok {
-			allSeries[idx], err = cs.LoadInitial(db, start)
+			allSeries[idx], err = cs.LoadInitial(db, start, now)
 		} else {
 			allSeries[idx], err = db.LoadDataWindow(name, start)
 		}
