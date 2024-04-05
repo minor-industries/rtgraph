@@ -74,7 +74,7 @@ func (g *Graph) computeDerivedSeries(
 	}
 
 	for msg := range msgCh {
-		m, ok := msg.(*schema.Series)
+		m, ok := msg.(schema.Series)
 		if !ok {
 			continue
 		}
@@ -88,7 +88,7 @@ func (g *Graph) computeDerivedSeries(
 			outValues := make([]schema.Value, len(m.Values))
 
 			for idx, v := range m.Values {
-				cs.values.PushBack(m)
+				cs.values.PushBack(v)
 				cs.removeOld(v.Timestamp)
 				value, ok := cs.compute()
 				if !ok {
