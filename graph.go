@@ -117,9 +117,6 @@ func (g *Graph) getInitialData(
 	windowStart time.Time,
 	lastPointMs uint64,
 ) (*messages.Data, error) {
-	var data schema.Series
-	var err error
-
 	start := windowStart // by default
 	if lastPointMs != 0 {
 		tStartAfter := time.UnixMilli(int64(lastPointMs + 1))
@@ -129,22 +126,65 @@ func (g *Graph) getInitialData(
 		}
 	}
 
-	// TODO: for now only loading the first series, need to interleave eventually
-	data, err = g.db.LoadDataWindow(sub.seriesNames[0], start)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "load data")
-	}
-
-	rows := &messages.Data{Rows: []any{}}
-	for _, d := range data.Values {
-		err := sub.packRow(rows, data.SeriesName, d.Timestamp, d.Value)
+	allSeries := make([]schema.Series, len(sub.seriesNames))
+	for idx, name := range sub.seriesNames {
+		var err error
+		allSeries[idx], err = g.db.LoadDataWindow(name, start)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "load data window")
 		}
 	}
 
+	rows := &messages.Data{Rows: []any{}}
+	if err := interleave(allSeries, func(seriesName string, value schema.Value) error {
+		// TODO: can we rewrite packRow so that it can't error?
+		return sub.packRow(rows, seriesName, value.Timestamp, value.Value)
+	}); err != nil {
+		return nil, errors.Wrap(err, "interleave")
+	}
+
 	return rows, nil
+}
+
+func interleave(
+	allSeries []schema.Series,
+	f func(seriesName string, value schema.Value) error,
+) error {
+	indices := make([]int, len(allSeries))
+
+	remaining := 0
+	for _, s := range allSeries {
+		remaining += len(s.Values)
+	}
+
+	for ; remaining > 0; remaining-- {
+		found := 0
+		var minT time.Time
+		var minIdx int
+
+		// this will be inefficient for a large number of series
+		for i, s := range allSeries {
+			j := indices[i]
+			if j == len(s.Values) {
+				continue
+			}
+			v := s.Values[j]
+			if found == 0 || v.Timestamp.Before(minT) {
+				minT = v.Timestamp
+				minIdx = i
+			}
+			found++
+		}
+
+		minSeries := allSeries[minIdx]
+		j := indices[minIdx]
+		if err := f(minSeries.SeriesName, minSeries.Values[j]); err != nil {
+			return err
+		}
+		indices[minIdx]++
+	}
+
+	return nil
 }
 
 func (g *Graph) Subscribe(

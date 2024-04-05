@@ -123,7 +123,7 @@ func (b *Backend) CreateSeries(
 func (b *Backend) Insert(objects []any) error {
 	err := b.DB.Transaction(func(tx *gorm.DB) error {
 		for _, row := range objects {
-			res := tx.Table("values").Create(row)
+			res := tx.Create(row)
 			if res.Error != nil {
 				return errors.Wrap(res.Error, "create")
 			}

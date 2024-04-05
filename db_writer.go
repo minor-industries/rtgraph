@@ -22,7 +22,7 @@ func (g *Graph) publishToDB() {
 
 	for msg := range msgCh {
 		switch m := msg.(type) {
-		case *schema.Series:
+		case schema.Series:
 			// TODO: figure out how to pass a slice to Insert()
 			for _, value := range m.Values {
 				g.dbWriter.Insert(&database.Value{
