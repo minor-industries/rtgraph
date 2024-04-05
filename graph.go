@@ -230,13 +230,11 @@ func (g *Graph) Subscribe(
 		if !allSeries.Has(c.OutputSeriesName()) {
 			continue
 		}
-		inName := c.InputSeriesName()
 		cs := newComputedSeries(
 			c.SeriesName,
 			c.Function,
 			c.Seconds,
 		)
-		computedMap[inName] = append(computedMap[inName], cs)
 		err := cs.loadInitial(g.db, now)
 		if err != nil {
 			_ = callback(&messages.Data{
@@ -244,6 +242,8 @@ func (g *Graph) Subscribe(
 			})
 			return
 		}
+		inName := c.InputSeriesName()
+		computedMap[inName] = append(computedMap[inName], cs)
 	}
 
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
