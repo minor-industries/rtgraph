@@ -2,7 +2,6 @@ package rtgraph
 
 import (
 	"fmt"
-	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/database"
@@ -104,21 +103,6 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) newSubscription(req *SubscriptionRequest) (*subscription, error) {
-	positions := map[string]int{}
-
-	for idx, seriesName := range req.Series {
-		positions[seriesName] = idx + 1
-	}
-
-	return &subscription{
-		seriesNames: req.Series,
-		positions:   positions,
-		lastSeen:    map[string]time.Time{},
-		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
-	}, nil
-}
-
 func (g *Graph) getInitialData(
 	sub *subscription,
 	windowStart time.Time,
@@ -207,7 +191,8 @@ func (g *Graph) Subscribe(
 		return
 	}
 
-	sub, err := g.newSubscription(req)
+	sub := newSubscription(g.computed, req)
+	err := sub.loadInitial(g.db, now)
 	if err != nil {
 		_ = callback(&messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),
@@ -224,27 +209,6 @@ func (g *Graph) Subscribe(
 	*/
 
 	// TODO: should some of the below be on the subscription struct
-	allSeries := set.FromSlice(sub.seriesNames)
-	computedMap := map[string][]*computedSeries{}
-	for _, c := range g.computed {
-		if !allSeries.Has(c.OutputSeriesName()) {
-			continue
-		}
-		cs := newComputedSeries(
-			c.SeriesName,
-			c.Function,
-			c.Seconds,
-		)
-		err := cs.loadInitial(g.db, now)
-		if err != nil {
-			_ = callback(&messages.Data{
-				Error: errors.Wrap(err, "cs: load initial").Error(),
-			})
-			return
-		}
-		inName := c.InputSeriesName()
-		computedMap[inName] = append(computedMap[inName], cs)
-	}
 
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
@@ -273,11 +237,11 @@ func (g *Graph) Subscribe(
 				continue
 			}
 
-			if css, ok := computedMap[msg.SeriesName]; ok {
+			if css, ok := sub.computedMap[msg.SeriesName]; ok {
 				computeAndPublishOutputSeries(css, msg, seriesCh)
 			}
 
-			if allSeries.Has(msg.SeriesName) {
+			if sub.allSeries.Has(msg.SeriesName) {
 				seriesCh <- msg
 			}
 		}

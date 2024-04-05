@@ -2,7 +2,10 @@ package rtgraph
 
 import (
 	"fmt"
+	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/minor-industries/rtgraph/messages"
+	"github.com/minor-industries/rtgraph/storage"
+	"github.com/pkg/errors"
 	"math"
 	"time"
 )
@@ -19,6 +22,55 @@ type subscription struct {
 	positions   map[string]int
 	lastSeen    map[string]time.Time
 	maxGap      time.Duration
+	allSeries   set.Set[string]
+	computedMap map[string][]*computedSeries
+}
+
+func newSubscription(
+	computed map[string]ComputedReq,
+	req *SubscriptionRequest,
+) *subscription {
+	positions := map[string]int{}
+
+	for idx, seriesName := range req.Series {
+		positions[seriesName] = idx + 1
+	}
+
+	sub := &subscription{
+		seriesNames: req.Series,
+		allSeries:   set.FromSlice(req.Series),
+		positions:   positions,
+		lastSeen:    map[string]time.Time{},
+		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
+		computedMap: map[string][]*computedSeries{},
+	}
+
+	for _, c := range computed {
+		if !sub.allSeries.Has(c.OutputSeriesName()) {
+			continue
+		}
+		cs := newComputedSeries(
+			c.SeriesName,
+			c.Function,
+			c.Seconds,
+		)
+		inName := c.InputSeriesName()
+		sub.computedMap[inName] = append(sub.computedMap[inName], cs)
+	}
+
+	return sub
+}
+
+func (sub *subscription) loadInitial(db storage.StorageBackend, now time.Time) error {
+	for _, css := range sub.computedMap {
+		for _, cs := range css {
+			err := cs.loadInitial(db, now)
+			if err != nil {
+				return errors.Wrap(err, "load initial")
+			}
+		}
+	}
+	return nil
 }
 
 func (sub *subscription) packRow(
