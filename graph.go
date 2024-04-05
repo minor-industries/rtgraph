@@ -223,6 +223,29 @@ func (g *Graph) Subscribe(
 		getInitialData must be interleaved for both types
 	*/
 
+	// TODO: should some of the below be on the subscription struct
+	allSeries := set.FromSlice(sub.seriesNames)
+	computedMap := map[string][]*computedSeries{}
+	for _, c := range g.computed {
+		if !allSeries.Has(c.OutputSeriesName()) {
+			continue
+		}
+		inName := c.InputSeriesName()
+		cs := newComputedSeries(
+			c.SeriesName,
+			c.Function,
+			c.Seconds,
+		)
+		computedMap[inName] = append(computedMap[inName], cs)
+		err := cs.loadInitial(g.db, now)
+		if err != nil {
+			_ = callback(&messages.Data{
+				Error: errors.Wrap(err, "cs: load initial").Error(),
+			})
+			return
+		}
+	}
+
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
 		_ = callback(&messages.Data{
@@ -240,21 +263,6 @@ func (g *Graph) Subscribe(
 	seriesCh := make(chan schema.Series)
 	// TODO: need to close all these channels, etc
 
-	allSeries := set.FromSlice(sub.seriesNames)
-
-	computedMap := map[string][]*computedSeries{}
-	for _, c := range g.computed {
-		if !allSeries.Has(c.OutputSeriesName()) {
-			continue
-		}
-		inName := c.InputSeriesName()
-		computedMap[inName] = append(computedMap[inName], newComputedSeries(
-			c.SeriesName,
-			c.Function,
-			c.Seconds,
-		))
-	}
-
 	go func() {
 		msgCh := g.broker.Subscribe()
 		defer g.broker.Unsubscribe(msgCh)
@@ -267,14 +275,11 @@ func (g *Graph) Subscribe(
 
 			if css, ok := computedMap[msg.SeriesName]; ok {
 				computeAndPublishOutputSeries(css, msg, seriesCh)
-				continue
 			}
 
-			if !allSeries.Has(msg.SeriesName) {
-				continue
+			if allSeries.Has(msg.SeriesName) {
+				seriesCh <- msg
 			}
-
-			seriesCh <- msg
 		}
 	}()
 
