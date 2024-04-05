@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/assets"
+	"github.com/minor-industries/rtgraph/internal/subscription"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -57,7 +58,7 @@ func (g *Graph) setupServer() error {
 		}
 		conn.CloseRead(ctx)
 
-		var req SubscriptionRequest
+		var req subscription.SubscriptionRequest
 		err = json.Unmarshal(reqBytes, &req)
 		if wsErr != nil {
 			fmt.Println("ws error", errors.Wrap(err, "unmarshal json"))

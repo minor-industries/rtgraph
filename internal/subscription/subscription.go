@@ -1,8 +1,9 @@
-package rtgraph
+package subscription
 
 import (
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
+	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
@@ -18,38 +19,38 @@ type SubscriptionRequest struct {
 	MaxGapMs    uint64   `json:"maxGapMs"`
 }
 
-type subscription struct {
+type Subscription struct {
 	seriesNames []string
 	positions   map[string]int
 	lastSeen    map[string]time.Time
 	maxGap      time.Duration
-	allSeries   set.Set[string]
-	allComputed []*computedSeries
+	AllSeries   set.Set[string] // TODO: make private
+	allComputed []*computed_series.ComputedSeries
 }
 
-func newSubscription(
-	computed map[string]ComputedReq,
+func NewSubscription(
+	computed map[string]computed_series.ComputedReq,
 	req *SubscriptionRequest,
-) *subscription {
+) *Subscription {
 	positions := map[string]int{}
 
 	for idx, seriesName := range req.Series {
 		positions[seriesName] = idx + 1
 	}
 
-	sub := &subscription{
+	sub := &Subscription{
 		seriesNames: req.Series,
-		allSeries:   set.FromSlice(req.Series),
+		AllSeries:   set.FromSlice(req.Series),
 		positions:   positions,
 		lastSeen:    map[string]time.Time{},
 		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
 	}
 
 	for _, c := range computed {
-		if !sub.allSeries.Has(c.OutputSeriesName()) {
+		if !sub.AllSeries.Has(c.OutputSeriesName()) {
 			continue
 		}
-		cs := newComputedSeries(
+		cs := computed_series.NewComputedSeries(
 			c.SeriesName,
 			c.Function,
 			c.Seconds,
@@ -60,7 +61,7 @@ func newSubscription(
 	return sub
 }
 
-func (sub *subscription) getInitialData(
+func (sub *Subscription) GetInitialData(
 	db storage.StorageBackend,
 	windowStart time.Time,
 	lastPointMs uint64,
@@ -74,9 +75,9 @@ func (sub *subscription) getInitialData(
 		}
 	}
 
-	computedMap := map[string]*computedSeries{} // keyed by output series name
+	computedMap := map[string]*computed_series.ComputedSeries{} // keyed by output series name
 	for _, cs := range sub.allComputed {
-		computedMap[cs.outputSeriesName] = cs
+		computedMap[cs.OutputSeriesName] = cs
 	}
 
 	allSeries := make([]schema.Series, len(sub.seriesNames))
@@ -84,7 +85,7 @@ func (sub *subscription) getInitialData(
 		var err error
 		// TODO: we should have better dispatch here, e.g., through an interface
 		if cs, ok := computedMap[name]; ok {
-			allSeries[idx], err = cs.loadInitial(db, start)
+			allSeries[idx], err = cs.LoadInitial(db, start)
 		} else {
 			allSeries[idx], err = db.LoadDataWindow(name, start)
 		}
@@ -95,8 +96,8 @@ func (sub *subscription) getInitialData(
 
 	rows := &messages.Data{Rows: []any{}}
 	if err := interleave(allSeries, func(seriesName string, value schema.Value) error {
-		// TODO: can we rewrite packRow so that it can't error?
-		return sub.packRow(rows, seriesName, value.Timestamp, value.Value)
+		// TODO: can we rewrite PackRow so that it can't error?
+		return sub.PackRow(rows, seriesName, value.Timestamp, value.Value)
 	}); err != nil {
 		return nil, errors.Wrap(err, "interleave")
 	}
@@ -104,7 +105,7 @@ func (sub *subscription) getInitialData(
 	return rows, nil
 }
 
-func (sub *subscription) packRow(
+func (sub *Subscription) PackRow(
 	data *messages.Data,
 	seriesName string,
 	timestamp time.Time,
@@ -146,4 +147,13 @@ func (sub *subscription) packRow(
 
 	data.Rows = append(data.Rows, row)
 	return nil
+}
+
+func (sub *Subscription) InputMap() map[string][]*computed_series.ComputedSeries {
+	result := map[string][]*computed_series.ComputedSeries{}
+	for _, cs := range sub.allComputed {
+		inName := cs.InputSeriesName
+		result[inName] = append(result[inName], cs)
+	}
+	return result
 }

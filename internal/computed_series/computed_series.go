@@ -1,4 +1,4 @@
-package rtgraph
+package computed_series
 
 import (
 	"container/list"
@@ -23,10 +23,10 @@ func (req *ComputedReq) InputSeriesName() string {
 	return req.SeriesName
 }
 
-type computedSeries struct {
+type ComputedSeries struct {
 	values           *list.List
-	inputSeriesName  string
-	outputSeriesName string
+	InputSeriesName  string // TODO: make private?
+	OutputSeriesName string // TODO: make private?
 	seconds          uint
 	fcn              string
 }
@@ -35,11 +35,11 @@ func OutputSeriesName(inputSeriesName string, fcn string, seconds uint) string {
 	return fmt.Sprintf("%s_%s_%ds", inputSeriesName, fcn, seconds)
 }
 
-func newComputedSeries(inputSeriesName string, fcn string, seconds uint) *computedSeries {
-	cs := &computedSeries{
+func NewComputedSeries(inputSeriesName string, fcn string, seconds uint) *ComputedSeries {
+	cs := &ComputedSeries{
 		values:           list.New(),
-		inputSeriesName:  inputSeriesName,
-		outputSeriesName: OutputSeriesName(inputSeriesName, fcn, seconds),
+		InputSeriesName:  inputSeriesName,
+		OutputSeriesName: OutputSeriesName(inputSeriesName, fcn, seconds),
 		seconds:          seconds,
 		fcn:              fcn,
 	}
@@ -47,7 +47,7 @@ func newComputedSeries(inputSeriesName string, fcn string, seconds uint) *comput
 	return cs
 }
 
-func (cs *computedSeries) compute() (float64, bool) {
+func (cs *ComputedSeries) compute() (float64, bool) {
 	switch cs.fcn {
 	case "avg":
 		return cs.computeAvg()
@@ -56,7 +56,7 @@ func (cs *computedSeries) compute() (float64, bool) {
 	}
 }
 
-func (cs *computedSeries) removeOld(now time.Time) {
+func (cs *ComputedSeries) removeOld(now time.Time) {
 	dt := -time.Duration(cs.seconds) * time.Second
 	cutoff := now.Add(dt)
 
@@ -71,7 +71,7 @@ func (cs *computedSeries) removeOld(now time.Time) {
 	}
 }
 
-func (cs *computedSeries) computeAvg() (float64, bool) {
+func (cs *ComputedSeries) computeAvg() (float64, bool) {
 	sum := 0.0
 	count := 0
 	for e := cs.values.Front(); e != nil; e = e.Next() {
@@ -90,18 +90,18 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	return 0, false
 }
 
-func (cs *computedSeries) loadInitial(db storage.StorageBackend, start time.Time) (schema.Series, error) {
-	// TODO: loadInitial could use some tests
+func (cs *ComputedSeries) LoadInitial(db storage.StorageBackend, start time.Time) (schema.Series, error) {
+	// TODO: LoadInitial could use some tests
 	lookBack := -time.Duration(cs.seconds) * time.Second
 	window, err := db.LoadDataWindow(
-		cs.inputSeriesName,
+		cs.InputSeriesName,
 		start.Add(lookBack),
 	)
 	if err != nil {
 		return schema.Series{}, errors.Wrap(err, "load original window")
 	}
 
-	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.outputSeriesName, cs.inputSeriesName)
+	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName, cs.InputSeriesName)
 
 	count := 0
 	sum := 0.0
@@ -139,7 +139,13 @@ func (cs *computedSeries) loadInitial(db storage.StorageBackend, start time.Time
 	// TODO: seed linked list for future values
 
 	return schema.Series{
-		SeriesName: cs.outputSeriesName,
+		SeriesName: cs.OutputSeriesName,
 		Values:     result,
 	}, nil
+}
+
+func (cs *ComputedSeries) ProcessNewValue(v schema.Value) (float64, bool) {
+	cs.values.PushBack(v)
+	cs.removeOld(v.Timestamp)
+	return cs.compute()
 }

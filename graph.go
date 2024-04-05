@@ -5,6 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/database"
+	"github.com/minor-industries/rtgraph/internal/computed_series"
+	"github.com/minor-industries/rtgraph/internal/subscription"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
@@ -20,14 +22,14 @@ type Graph struct {
 	server   *gin.Engine
 	dbWriter *database.DBWriter
 	db       storage.StorageBackend
-	computed map[string]ComputedReq
+	computed map[string]computed_series.ComputedReq
 }
 
 func New(
 	backend storage.StorageBackend,
 	errCh chan error,
 	seriesNames []string,
-	computed []ComputedReq,
+	computed []computed_series.ComputedReq,
 ) (*Graph, error) {
 	for _, c := range computed {
 		seriesNames = append(seriesNames, c.OutputSeriesName())
@@ -51,7 +53,7 @@ func New(
 		errCh:    errCh,
 		server:   server,
 		dbWriter: database.NewDBWriter(backend, errCh, 100),
-		computed: map[string]ComputedReq{},
+		computed: map[string]computed_series.ComputedReq{},
 	}
 
 	for _, req := range computed {
@@ -99,54 +101,8 @@ func (g *Graph) CreateValue(
 	return nil
 }
 
-func floatP(v float32) *float32 {
-	return &v
-}
-
-func interleave(
-	allSeries []schema.Series,
-	f func(seriesName string, value schema.Value) error,
-) error {
-	// TODO: interleave could use some tests!
-	indices := make([]int, len(allSeries))
-
-	remaining := 0
-	for _, s := range allSeries {
-		remaining += len(s.Values)
-	}
-
-	for ; remaining > 0; remaining-- {
-		found := 0
-		var minT time.Time
-		var minIdx int
-
-		// this will be inefficient for a large number of series
-		for i, s := range allSeries {
-			j := indices[i]
-			if j == len(s.Values) {
-				continue
-			}
-			v := s.Values[j]
-			if found == 0 || v.Timestamp.Before(minT) {
-				minT = v.Timestamp
-				minIdx = i
-			}
-			found++
-		}
-
-		minSeries := allSeries[minIdx]
-		j := indices[minIdx]
-		if err := f(minSeries.SeriesName, minSeries.Values[j]); err != nil {
-			return err
-		}
-		indices[minIdx]++
-	}
-
-	return nil
-}
-
 func (g *Graph) Subscribe(
-	req *SubscriptionRequest,
+	req *subscription.SubscriptionRequest,
 	now time.Time,
 	callback func(data *messages.Data) error,
 ) {
@@ -157,12 +113,12 @@ func (g *Graph) Subscribe(
 		return
 	}
 
-	sub := newSubscription(g.computed, req)
+	sub := subscription.NewSubscription(g.computed, req)
 
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
 	start := now.Add(-windowSize)
 
-	initialData, err := sub.getInitialData(g.db, start, req.LastPointMs)
+	initialData, err := sub.GetInitialData(g.db, start, req.LastPointMs)
 	if err != nil {
 		_ = callback(&messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
@@ -183,11 +139,7 @@ func (g *Graph) Subscribe(
 		msgCh := g.broker.Subscribe()
 		defer g.broker.Unsubscribe(msgCh)
 
-		computedMap := map[string][]*computedSeries{}
-		for _, cs := range sub.allComputed {
-			inName := cs.inputSeriesName
-			computedMap[inName] = append(computedMap[inName], cs)
-		}
+		computedMap := sub.InputMap()
 
 		for m := range msgCh {
 			msg, ok := m.(schema.Series)
@@ -199,7 +151,7 @@ func (g *Graph) Subscribe(
 				computeAndPublishOutputSeries(css, msg, seriesCh)
 			}
 
-			if sub.allSeries.Has(msg.SeriesName) {
+			if sub.AllSeries.Has(msg.SeriesName) {
 				seriesCh <- msg
 			}
 		}
@@ -208,7 +160,8 @@ func (g *Graph) Subscribe(
 	for series := range seriesCh {
 		for _, v := range series.Values {
 			data := &messages.Data{Rows: []interface{}{}}
-			err := sub.packRow(data, series.SeriesName, v.Timestamp, v.Value)
+			// TODO: don't love how data is passed in here, can we return the row (or do something else)?
+			err := sub.PackRow(data, series.SeriesName, v.Timestamp, v.Value)
 			if err != nil {
 				panic(err) // TODO
 			}
@@ -221,20 +174,18 @@ func (g *Graph) Subscribe(
 }
 
 func computeAndPublishOutputSeries(
-	css []*computedSeries,
+	css []*computed_series.ComputedSeries,
 	msg schema.Series,
 	seriesCh chan schema.Series,
 ) {
 	for _, cs := range css {
 		for _, v := range msg.Values {
-			cs.values.PushBack(v)
-			cs.removeOld(v.Timestamp)
-			value, ok := cs.compute()
+			value, ok := cs.ProcessNewValue(v)
 			if !ok {
 				continue
 			}
 			seriesCh <- schema.Series{
-				SeriesName: cs.outputSeriesName,
+				SeriesName: cs.OutputSeriesName,
 				Values: []schema.Value{{
 					Timestamp: v.Timestamp,
 					Value:     value,

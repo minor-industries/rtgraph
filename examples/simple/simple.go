@@ -4,6 +4,7 @@ import (
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
+	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/pkg/errors"
 	"io/fs"
 	"math/rand"
@@ -39,7 +40,7 @@ func run() error {
 			"sample1",
 			"sample2",
 		},
-		[]rtgraph.ComputedReq{
+		[]computed_series.ComputedReq{
 			{
 				SeriesName: "sample1",
 				Function:   "avg",
