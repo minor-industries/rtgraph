@@ -90,14 +90,14 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	return 0, false
 }
 
-func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) error {
+func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) (schema.Series, error) {
 	lookBack := -time.Duration(cs.seconds) * time.Second
 	window, err := db.LoadDataWindow(
 		cs.inputSeriesName,
 		now.Add(lookBack),
 	)
 	if err != nil {
-		return errors.Wrap(err, "load data window")
+		return schema.Series{}, errors.Wrap(err, "load data window")
 	}
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.outputSeriesName, cs.inputSeriesName)
@@ -109,5 +109,9 @@ func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) 
 		})
 	}
 
-	return nil
+	return schema.Series{
+		SeriesName: cs.outputSeriesName,
+		Values:     nil, // TODO: fill in values
+		Persisted:  false,
+	}, nil
 }

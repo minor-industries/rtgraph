@@ -60,16 +60,6 @@ func newSubscription(
 	return sub
 }
 
-func (sub *subscription) loadInitial(db storage.StorageBackend, now time.Time) error {
-	for _, cs := range sub.allComputed {
-		err := cs.loadInitial(db, now)
-		if err != nil {
-			return errors.Wrap(err, "load initial")
-		}
-	}
-	return nil
-}
-
 func (sub *subscription) getInitialData(
 	db storage.StorageBackend,
 	windowStart time.Time,
@@ -84,10 +74,20 @@ func (sub *subscription) getInitialData(
 		}
 	}
 
+	computedMap := map[string]*computedSeries{} // keyed by output series name
+	for _, cs := range sub.allComputed {
+		computedMap[cs.outputSeriesName] = cs
+	}
+
 	allSeries := make([]schema.Series, len(sub.seriesNames))
 	for idx, name := range sub.seriesNames {
 		var err error
-		allSeries[idx], err = db.LoadDataWindow(name, start)
+		// TODO: we should have better dispatch here, e.g., through an interface
+		if cs, ok := computedMap[name]; ok {
+			allSeries[idx], err = cs.loadInitial(db, start)
+		} else {
+			allSeries[idx], err = db.LoadDataWindow(name, start)
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "load data window")
 		}

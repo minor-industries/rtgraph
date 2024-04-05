@@ -158,23 +158,9 @@ func (g *Graph) Subscribe(
 	}
 
 	sub := newSubscription(g.computed, req)
-	err := sub.loadInitial(g.db, now)
-	if err != nil {
-		_ = callback(&messages.Data{
-			Error: errors.Wrap(err, "new subscription").Error(),
-		})
-		return
-	}
 
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
 	start := now.Add(-windowSize)
-
-	/*
-		Need two things: initial, plus streaming
-		getInitialData must be interleaved for both types
-	*/
-
-	// TODO: should some of the below be on the subscription struct
 
 	initialData, err := sub.getInitialData(g.db, start, req.LastPointMs)
 	if err != nil {
