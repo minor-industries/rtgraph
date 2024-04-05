@@ -108,6 +108,8 @@ func (cs *computedSeries) loadInitial(db storage.StorageBackend, start time.Time
 	values := window.Values
 	result := make([]schema.Value, 0, len(values))
 
+	// TODO: avg function is hardcoded in code below
+
 	for end, bgn := 0, 0; end < len(values); end++ {
 		endPt := values[end]
 		count++
