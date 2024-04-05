@@ -197,13 +197,19 @@ func (g *Graph) Subscribe(
 		msgCh := g.broker.Subscribe()
 		defer g.broker.Unsubscribe(msgCh)
 
+		computedMap := map[string][]*computedSeries{}
+		for _, cs := range sub.allComputed {
+			inName := cs.inputSeriesName
+			computedMap[inName] = append(computedMap[inName], cs)
+		}
+
 		for m := range msgCh {
 			msg, ok := m.(schema.Series)
 			if !ok {
 				continue
 			}
 
-			if css, ok := sub.computedMap[msg.SeriesName]; ok {
+			if css, ok := computedMap[msg.SeriesName]; ok {
 				computeAndPublishOutputSeries(css, msg, seriesCh)
 			}
 

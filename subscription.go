@@ -24,7 +24,6 @@ type subscription struct {
 	lastSeen    map[string]time.Time
 	maxGap      time.Duration
 	allSeries   set.Set[string]
-	computedMap map[string][]*computedSeries
 	allComputed []*computedSeries
 }
 
@@ -44,7 +43,6 @@ func newSubscription(
 		positions:   positions,
 		lastSeen:    map[string]time.Time{},
 		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
-		computedMap: map[string][]*computedSeries{}, // key: input series name
 	}
 
 	for _, c := range computed {
@@ -56,8 +54,6 @@ func newSubscription(
 			c.Function,
 			c.Seconds,
 		)
-		inName := c.InputSeriesName()
-		sub.computedMap[inName] = append(sub.computedMap[inName], cs)
 		sub.allComputed = append(sub.allComputed, cs)
 	}
 
