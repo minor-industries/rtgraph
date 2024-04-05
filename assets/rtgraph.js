@@ -116,6 +116,10 @@ class Graph {
     }
 
     scroll() {
+        if (this.opts.disableScroll) {
+            return;
+        }
+
         setInterval(() => {
             if (this.g === undefined) {
                 return;
