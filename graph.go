@@ -220,10 +220,9 @@ func (g *Graph) Subscribe(
 
 	/*
 		Need two things: initial, plus streaming
+		getInitialData must be interleaved for both types
 		Need a goroutine to produce values
 	*/
-
-	seriesCh := make(chan schema.Series)
 
 	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
 	if err != nil {
@@ -239,10 +238,25 @@ func (g *Graph) Subscribe(
 		return
 	}
 
+	seriesCh := make(chan schema.Series)
 	// TODO: need to close all these channels, etc
 
+	allSeries := set.FromSlice(sub.seriesNames)
+
+	computedMap := map[string][]*computedSeries{}
+	for _, c := range g.computed {
+		if !allSeries.Has(c.OutputSeriesName()) {
+			continue
+		}
+		inName := c.InputSeriesName()
+		computedMap[inName] = append(computedMap[inName], newComputedSeries(
+			c.SeriesName,
+			c.Function,
+			c.Seconds,
+		))
+	}
+
 	go func() {
-		allSeries := set.FromSlice(sub.seriesNames)
 		msgCh := g.broker.Subscribe()
 		defer g.broker.Unsubscribe(msgCh)
 
@@ -250,6 +264,27 @@ func (g *Graph) Subscribe(
 			msg, ok := m.(schema.Series)
 			if !ok {
 				continue
+			}
+
+			if css, ok := computedMap[msg.SeriesName]; ok {
+				for _, cs := range css {
+					for _, v := range msg.Values {
+						cs.values.PushBack(v)
+						cs.removeOld(v.Timestamp)
+						value, ok := cs.compute()
+						if !ok {
+							continue
+						}
+						seriesCh <- schema.Series{
+							SeriesName: cs.outputSeriesName,
+							Values: []schema.Value{{
+								Timestamp: v.Timestamp,
+								Value:     value,
+							}},
+							Persisted: false,
+						}
+					}
+				}
 			}
 
 			if !allSeries.Has(msg.SeriesName) {

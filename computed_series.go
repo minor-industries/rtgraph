@@ -19,6 +19,10 @@ func (req *ComputedReq) OutputSeriesName() string {
 	return fmt.Sprintf("%s_%s_%ds", req.SeriesName, req.Function, req.Seconds)
 }
 
+func (req *ComputedReq) InputSeriesName() string {
+	return req.SeriesName
+}
+
 type computedSeries struct {
 	values           *list.List
 	inputSeriesName  string
