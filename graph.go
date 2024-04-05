@@ -103,40 +103,6 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
-func (g *Graph) getInitialData(
-	sub *subscription,
-	windowStart time.Time,
-	lastPointMs uint64,
-) (*messages.Data, error) {
-	start := windowStart // by default
-	if lastPointMs != 0 {
-		tStartAfter := time.UnixMilli(int64(lastPointMs + 1))
-		if tStartAfter.After(windowStart) {
-			// only use if inside the start window
-			start = tStartAfter
-		}
-	}
-
-	allSeries := make([]schema.Series, len(sub.seriesNames))
-	for idx, name := range sub.seriesNames {
-		var err error
-		allSeries[idx], err = g.db.LoadDataWindow(name, start)
-		if err != nil {
-			return nil, errors.Wrap(err, "load data window")
-		}
-	}
-
-	rows := &messages.Data{Rows: []any{}}
-	if err := interleave(allSeries, func(seriesName string, value schema.Value) error {
-		// TODO: can we rewrite packRow so that it can't error?
-		return sub.packRow(rows, seriesName, value.Timestamp, value.Value)
-	}); err != nil {
-		return nil, errors.Wrap(err, "interleave")
-	}
-
-	return rows, nil
-}
-
 func interleave(
 	allSeries []schema.Series,
 	f func(seriesName string, value schema.Value) error,
@@ -210,7 +176,7 @@ func (g *Graph) Subscribe(
 
 	// TODO: should some of the below be on the subscription struct
 
-	initialData, err := g.getInitialData(sub, start, req.LastPointMs)
+	initialData, err := sub.getInitialData(g.db, start, req.LastPointMs)
 	if err != nil {
 		_ = callback(&messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),

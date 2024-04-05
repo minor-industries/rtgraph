@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/minor-industries/rtgraph/messages"
+	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
 	"math"
@@ -71,6 +72,40 @@ func (sub *subscription) loadInitial(db storage.StorageBackend, now time.Time) e
 		}
 	}
 	return nil
+}
+
+func (sub *subscription) getInitialData(
+	db storage.StorageBackend,
+	windowStart time.Time,
+	lastPointMs uint64,
+) (*messages.Data, error) {
+	start := windowStart // by default
+	if lastPointMs != 0 {
+		tStartAfter := time.UnixMilli(int64(lastPointMs + 1))
+		if tStartAfter.After(windowStart) {
+			// only use if inside the start window
+			start = tStartAfter
+		}
+	}
+
+	allSeries := make([]schema.Series, len(sub.seriesNames))
+	for idx, name := range sub.seriesNames {
+		var err error
+		allSeries[idx], err = db.LoadDataWindow(name, start)
+		if err != nil {
+			return nil, errors.Wrap(err, "load data window")
+		}
+	}
+
+	rows := &messages.Data{Rows: []any{}}
+	if err := interleave(allSeries, func(seriesName string, value schema.Value) error {
+		// TODO: can we rewrite packRow so that it can't error?
+		return sub.packRow(rows, seriesName, value.Timestamp, value.Value)
+	}); err != nil {
+		return nil, errors.Wrap(err, "interleave")
+	}
+
+	return rows, nil
 }
 
 func (sub *subscription) packRow(
