@@ -23,12 +23,15 @@ func (g *Graph) publishToDB() {
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case *schema.Series:
-			g.dbWriter.Insert(&database.Value{
-				ID:        database.RandomID(),
-				Timestamp: m.Timestamp,
-				Value:     m.Value,
-				SeriesID:  hashedID(m.SeriesName), // TODO: this seems bad. Perhaps provide a constructor that does this for us and don't allow using the struct form
-			})
+			// TODO: figure out how to pass a slice to Insert()
+			for _, value := range m.Values {
+				g.dbWriter.Insert(&database.Value{
+					ID:        database.RandomID(),
+					Timestamp: value.Timestamp,
+					Value:     value.Value,
+					SeriesID:  hashedID(m.SeriesName), // TODO: this seems bad. Perhaps provide a constructor that does this for us and don't allow using the struct form
+				})
+			}
 		}
 	}
 }

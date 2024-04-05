@@ -7,9 +7,9 @@ import (
 
 type StorageBackend interface {
 	LoadDataWindow(
-		seriesNames []string,
+		seriesName string,
 		start time.Time,
-	) ([]schema.Series, error)
+	) (schema.Series, error)
 
 	CreateSeries(
 		seriesNames []string,

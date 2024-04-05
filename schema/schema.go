@@ -2,13 +2,16 @@ package schema
 
 import "time"
 
-// TODO: should this be "Value"?
-type Series struct {
-	SeriesName string
-	Timestamp  time.Time
-	Value      float64
+type Value struct {
+	Timestamp time.Time
+	Value     float64
 }
 
-func (s *Series) Name() string {
+type Series struct {
+	SeriesName string
+	Values     []Value
+}
+
+func (s Series) Name() string {
 	return "series"
 }

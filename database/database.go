@@ -69,31 +69,29 @@ type Backend struct {
 }
 
 func (b *Backend) LoadDataWindow(
-	seriesNames []string,
+	seriesName string,
 	start time.Time,
-) ([]schema.Series, error) {
+) (schema.Series, error) {
 	var rows []Value
 
-	seriesIDs := make([][]byte, len(seriesNames))
-	for i, name := range seriesNames {
-		seriesIDs[i] = hashedID(name)
-	}
-
 	tx := b.DB.Preload("Series").Where(
-		"series_id IN ? and timestamp >= ?",
-		seriesIDs,
+		"series_id = ? and timestamp >= ?",
+		hashedID(seriesName),
 		start,
 	).Order("timestamp asc").Find(&rows)
 	if tx.Error != nil {
-		return nil, errors.Wrap(tx.Error, "find")
+		return schema.Series{}, errors.Wrap(tx.Error, "find")
 	}
 
-	result := make([]schema.Series, len(rows))
+	result := schema.Series{
+		SeriesName: seriesName,
+	}
+	result.Values = make([]schema.Value, len(rows))
+
 	for idx, row := range rows {
-		result[idx] = schema.Series{
-			SeriesName: row.Series.Name,
-			Timestamp:  row.Timestamp,
-			Value:      row.Value,
+		result.Values[idx] = schema.Value{
+			Timestamp: row.Timestamp,
+			Value:     row.Value,
 		}
 	}
 
@@ -125,7 +123,7 @@ func (b *Backend) CreateSeries(
 func (b *Backend) Insert(objects []any) error {
 	err := b.DB.Transaction(func(tx *gorm.DB) error {
 		for _, row := range objects {
-			res := tx.Create(row)
+			res := tx.Table("values").Create(row)
 			if res.Error != nil {
 				return errors.Wrap(res.Error, "create")
 			}

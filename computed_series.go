@@ -85,17 +85,25 @@ func (g *Graph) computeDerivedSeries(
 		}
 
 		for _, cs := range allCs {
-			cs.values.PushBack(m)
-			cs.removeOld(m.Timestamp)
-			value, ok := cs.compute()
-			if !ok {
-				continue
+			outValues := make([]schema.Value, len(m.Values))
+
+			for idx, v := range m.Values {
+				cs.values.PushBack(m)
+				cs.removeOld(v.Timestamp)
+				value, ok := cs.compute()
+				if !ok {
+					continue
+				}
+
+				outValues[idx] = schema.Value{
+					Timestamp: v.Timestamp,
+					Value:     value,
+				}
 			}
 
 			g.broker.Publish(&schema.Series{
 				SeriesName: cs.outputSeriesName,
-				Timestamp:  m.Timestamp,
-				Value:      value,
+				Values:     outValues,
 			})
 		}
 	}
@@ -107,7 +115,7 @@ func (cs *computedSeries) removeOld(now time.Time) {
 
 	for {
 		e := cs.values.Front()
-		v := e.Value.(*schema.Series)
+		v := e.Value.(schema.Value)
 		if v.Timestamp.Before(cutoff) {
 			cs.values.Remove(e)
 		} else {
@@ -120,7 +128,7 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	sum := 0.0
 	count := 0
 	for e := cs.values.Front(); e != nil; e = e.Next() {
-		v := e.Value.(*schema.Series)
+		v := e.Value.(schema.Value)
 		if v.Value == 0 { // ignore zeros in the calculation
 			continue
 		}
@@ -136,24 +144,24 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 }
 
 func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) error {
-	lookBack := -time.Duration(cs.seconds) * time.Second
-	window, err := db.LoadDataWindow(
-		[]string{cs.inputSeriesName},
-		now.Add(lookBack),
-	)
-	if err != nil {
-		return errors.Wrap(err, "load data window")
-	}
-
-	fmt.Printf("loaded %d rows for %s (%s)\n", len(window), cs.outputSeriesName, cs.inputSeriesName)
-
-	for _, value := range window {
-		cs.values.PushBack(&schema.Series{
-			SeriesName: cs.inputSeriesName,
-			Timestamp:  value.Timestamp,
-			Value:      value.Value,
-		})
-	}
-
-	return nil
+	return errors.New("not implemented")
+	//lookBack := -time.Duration(cs.seconds) * time.Second
+	//window, err := db.LoadDataWindow(
+	//	[]string{cs.inputSeriesName},
+	//	now.Add(lookBack),
+	//)
+	//if err != nil {
+	//	return errors.Wrap(err, "load data window")
+	//}
+	//
+	//fmt.Printf("loaded %d rows for %s (%s)\n", len(window), cs.outputSeriesName, cs.inputSeriesName)
+	//
+	//for _, value := range window {
+	//	cs.values.PushBack(schema.Value{
+	//		Timestamp: value.Timestamp,
+	//		Value:     value.Value,
+	//	})
+	//}
+	//
+	//return nil
 }

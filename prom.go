@@ -26,7 +26,14 @@ func (g *Graph) publishPrometheusMetrics() {
 					g.errCh <- errors.Wrap(err, "register prometheus metric")
 				}
 			}
-			metricMap[m.SeriesName].Set(m.Value)
+
+			if len(m.Values) == 0 {
+				continue
+			}
+
+			lastPoint := m.Values[len(m.Values)-1]
+
+			metricMap[m.SeriesName].Set(lastPoint.Value)
 		}
 	}
 }

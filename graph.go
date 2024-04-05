@@ -82,10 +82,12 @@ func (g *Graph) CreateValue(
 ) error {
 	// TODO: do we need to ensure the series exists?
 
-	g.broker.Publish(&schema.Series{
+	g.broker.Publish(schema.Series{
 		SeriesName: seriesName,
-		Timestamp:  timestamp,
-		Value:      value,
+		Values: []schema.Value{{
+			Timestamp: timestamp,
+			Value:     value,
+		}},
 	})
 
 	return nil
@@ -115,7 +117,7 @@ func (g *Graph) getInitialData(
 	windowStart time.Time,
 	lastPointMs uint64,
 ) (*messages.Data, error) {
-	var data []schema.Series
+	var data schema.Series
 	var err error
 
 	start := windowStart // by default
@@ -127,15 +129,16 @@ func (g *Graph) getInitialData(
 		}
 	}
 
-	data, err = g.db.LoadDataWindow(sub.seriesNames, start)
+	// TODO: for now only loading the first series, need to interleave eventually
+	data, err = g.db.LoadDataWindow(sub.seriesNames[0], start)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "load data")
 	}
 
 	rows := &messages.Data{Rows: []any{}}
-	for _, d := range data {
-		err := sub.packRow(rows, d.SeriesName, d.Timestamp, d.Value)
+	for _, d := range data.Values {
+		err := sub.packRow(rows, data.SeriesName, d.Timestamp, d.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -187,10 +190,14 @@ func (g *Graph) Subscribe(
 	allSeries := set.FromSlice(sub.seriesNames)
 	for msg := range msgCh {
 		switch m := msg.(type) {
-		case *schema.Series:
-			if allSeries.Has(m.SeriesName) {
+		case schema.Series:
+			if !allSeries.Has(m.SeriesName) {
+				continue
+			}
+
+			for _, v := range m.Values {
 				data := &messages.Data{Rows: []interface{}{}}
-				err := sub.packRow(data, m.SeriesName, m.Timestamp, m.Value)
+				err := sub.packRow(data, m.SeriesName, v.Timestamp, v.Value)
 				if err != nil {
 					panic(err) // TODO
 				}

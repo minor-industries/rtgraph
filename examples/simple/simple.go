@@ -40,16 +40,16 @@ func run() error {
 			"sample2",
 		},
 		[]rtgraph.ComputedReq{
-			{
-				SeriesName: "sample1",
-				Function:   "avg",
-				Seconds:    30,
-			},
-			{
-				SeriesName: "sample2",
-				Function:   "avg",
-				Seconds:    90,
-			},
+			//{
+			//	SeriesName: "sample1",
+			//	Function:   "avg",
+			//	Seconds:    30,
+			//},
+			//{
+			//	SeriesName: "sample2",
+			//	Function:   "avg",
+			//	Seconds:    90,
+			//},
 		},
 	)
 	if err != nil {
