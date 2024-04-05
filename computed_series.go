@@ -56,64 +56,6 @@ func (cs *computedSeries) compute() (float64, bool) {
 	}
 }
 
-func (g *Graph) computeDerivedSeries(
-	backend storage.StorageBackend,
-	ch chan error,
-	reqs []ComputedReq,
-) {
-	msgCh := g.broker.Subscribe()
-	defer g.broker.Unsubscribe(msgCh)
-
-	computedMap := map[string][]*computedSeries{}
-
-	now := time.Now()
-	for _, req := range reqs {
-		cs := newComputedSeries(req.SeriesName, req.Function, req.Seconds)
-		err := cs.loadInitial(backend, now)
-		if err != nil {
-			ch <- errors.Wrap(err, "")
-			return
-		}
-		computedMap[cs.inputSeriesName] = append(computedMap[cs.inputSeriesName], cs)
-	}
-
-	for msg := range msgCh {
-		m, ok := msg.(schema.Series)
-		if !ok {
-			continue
-		}
-
-		allCs, ok := computedMap[m.SeriesName]
-		if !ok {
-			continue
-		}
-
-		for _, cs := range allCs {
-			outValues := make([]schema.Value, len(m.Values))
-
-			for idx, v := range m.Values {
-				cs.values.PushBack(v)
-				cs.removeOld(v.Timestamp)
-				value, ok := cs.compute()
-				if !ok {
-					continue
-				}
-
-				outValues[idx] = schema.Value{
-					Timestamp: v.Timestamp,
-					Value:     value,
-				}
-			}
-
-			g.broker.Publish(schema.Series{
-				SeriesName: cs.outputSeriesName,
-				Values:     outValues,
-				Persisted:  false,
-			})
-		}
-	}
-}
-
 func (cs *computedSeries) removeOld(now time.Time) {
 	dt := -time.Duration(cs.seconds) * time.Second
 	cutoff := now.Add(dt)
