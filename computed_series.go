@@ -90,28 +90,54 @@ func (cs *computedSeries) computeAvg() (float64, bool) {
 	return 0, false
 }
 
-func (cs *computedSeries) loadInitial(db storage.StorageBackend, now time.Time) (schema.Series, error) {
+func (cs *computedSeries) loadInitial(db storage.StorageBackend, start time.Time) (schema.Series, error) {
+	// TODO: loadInitial could use some tests
 	lookBack := -time.Duration(cs.seconds) * time.Second
 	window, err := db.LoadDataWindow(
 		cs.inputSeriesName,
-		now.Add(lookBack),
+		start.Add(lookBack),
 	)
 	if err != nil {
-		return schema.Series{}, errors.Wrap(err, "load data window")
+		return schema.Series{}, errors.Wrap(err, "load original window")
 	}
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.outputSeriesName, cs.inputSeriesName)
 
-	for _, value := range window.Values {
-		cs.values.PushBack(schema.Value{
-			Timestamp: value.Timestamp,
-			Value:     value.Value,
+	count := 0
+	sum := 0.0
+	values := window.Values
+	result := make([]schema.Value, 0, len(values))
+
+	for end, bgn := 0, 0; end < len(values); end++ {
+		endPt := values[end]
+		count++
+		sum += endPt.Value
+		cutoff := endPt.Timestamp.Add(lookBack)
+		for ; bgn < end; bgn++ {
+			bgnPt := values[bgn]
+			if bgnPt.Timestamp.After(cutoff) {
+				break
+			}
+			count--
+			sum -= bgnPt.Value
+		}
+		if endPt.Timestamp.Before(start) {
+			continue
+		}
+		if count == 0 {
+			panic("didn't expect this")
+		}
+		value := sum / float64(count)
+		result = append(result, schema.Value{
+			Timestamp: endPt.Timestamp,
+			Value:     value,
 		})
 	}
 
+	// TODO: seed linked list for future values
+
 	return schema.Series{
 		SeriesName: cs.outputSeriesName,
-		Values:     nil, // TODO: fill in values
-		Persisted:  false,
+		Values:     result,
 	}, nil
 }
