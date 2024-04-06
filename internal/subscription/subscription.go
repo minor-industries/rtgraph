@@ -82,9 +82,9 @@ func (sub *Subscription) GetInitialData(
 		var err error
 		// TODO: we should have better dispatch here, e.g., through an interface
 		if cs.FunctionName() == "" {
-			allSeries[idx], err = cs.LoadInitial(db, start, now)
-		} else {
 			allSeries[idx], err = db.LoadDataWindow(cs.InputSeriesName, start)
+		} else {
+			allSeries[idx], err = cs.LoadInitial(db, start, now)
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "load data window")
