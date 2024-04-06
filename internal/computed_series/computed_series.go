@@ -128,8 +128,6 @@ func (cs *ComputedSeries) LoadInitial(
 		})
 	}
 
-	// TODO: seed linked list for future values
-
 	return schema.Series{
 		SeriesName: cs.OutputSeriesName,
 		Values:     result,
