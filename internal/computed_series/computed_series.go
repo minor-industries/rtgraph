@@ -10,27 +10,32 @@ import (
 )
 
 type ComputedSeries struct {
-	values           *list.List
-	InputSeriesName  string // TODO: make private?
-	OutputSeriesName string // TODO: make private?
-	seconds          uint
-	fcn              string
+	values          *list.List
+	InputSeriesName string // TODO: make private?
+	fcn             string
+	duration        time.Duration
 }
 
-func OutputSeriesName(inputSeriesName string, fcn string, seconds uint) string {
-	return fmt.Sprintf("%s_%s_%ds", inputSeriesName, fcn, seconds)
-}
-
-func NewComputedSeries(inputSeriesName string, fcn string, seconds uint) *ComputedSeries {
+func NewComputedSeries(inputSeriesName string, fcn string, duration time.Duration) *ComputedSeries {
 	cs := &ComputedSeries{
-		values:           list.New(),
-		InputSeriesName:  inputSeriesName,
-		OutputSeriesName: OutputSeriesName(inputSeriesName, fcn, seconds),
-		seconds:          seconds,
-		fcn:              fcn,
+		values:          list.New(),
+		InputSeriesName: inputSeriesName,
+		duration:        duration,
+		fcn:             fcn,
 	}
 
 	return cs
+}
+
+func (cs *ComputedSeries) FunctionName() string {
+	return cs.fcn
+}
+
+func (cs *ComputedSeries) OutputSeriesName() string {
+	if cs.fcn == "" {
+		return cs.InputSeriesName
+	}
+	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn, cs.duration.String())
 }
 
 func (cs *ComputedSeries) compute() (float64, bool) {
@@ -43,7 +48,7 @@ func (cs *ComputedSeries) compute() (float64, bool) {
 }
 
 func (cs *ComputedSeries) removeOld(now time.Time) {
-	dt := -time.Duration(cs.seconds) * time.Second
+	dt := -cs.duration
 	cutoff := now.Add(dt)
 
 	for {
@@ -82,7 +87,7 @@ func (cs *ComputedSeries) LoadInitial(
 	now time.Time,
 ) (schema.Series, error) {
 	// TODO: LoadInitial could use some tests
-	lookBack := -time.Duration(cs.seconds) * time.Second
+	lookBack := -cs.duration
 	historyCutoff := now.Add(lookBack)
 	window, err := db.LoadDataWindow(
 		cs.InputSeriesName,
@@ -92,7 +97,7 @@ func (cs *ComputedSeries) LoadInitial(
 		return schema.Series{}, errors.Wrap(err, "load original window")
 	}
 
-	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName, cs.InputSeriesName)
+	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
 
 	count := 0
 	sum := 0.0
@@ -129,7 +134,7 @@ func (cs *ComputedSeries) LoadInitial(
 	}
 
 	return schema.Series{
-		SeriesName: cs.OutputSeriesName,
+		SeriesName: cs.OutputSeriesName(),
 		Values:     result,
 	}, nil
 }

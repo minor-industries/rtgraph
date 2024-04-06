@@ -2,8 +2,6 @@ package subscription
 
 import (
 	"fmt"
-	"github.com/chrispappas/golang-generics-set/set"
-	"github.com/minor-industries/rtgraph/computed_request"
 	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
@@ -21,45 +19,42 @@ type SubscriptionRequest struct {
 }
 
 type Subscription struct {
-	seriesNames []string
 	positions   map[string]int
 	lastSeen    map[string]time.Time
 	maxGap      time.Duration
-	AllSeries   set.Set[string] // TODO: make private
 	allComputed []*computed_series.ComputedSeries
 }
 
-func NewSubscription(
-	computed map[string]computed_request.ComputedReq,
-	req *SubscriptionRequest,
-) *Subscription {
-	positions := map[string]int{}
-
-	for idx, seriesName := range req.Series {
-		positions[seriesName] = idx + 1
+func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
+	var reqs []computed_series.SeriesRequest
+	for _, sn := range req.Series {
+		req, err := computed_series.Parse(sn)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse series")
+		}
+		reqs = append(reqs, req)
 	}
 
 	sub := &Subscription{
-		seriesNames: req.Series,
-		AllSeries:   set.FromSlice(req.Series),
-		positions:   positions,
-		lastSeen:    map[string]time.Time{},
-		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
+		lastSeen:  map[string]time.Time{},
+		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
+		positions: map[string]int{},
 	}
 
-	for _, c := range computed {
-		if !sub.AllSeries.Has(c.OutputSeriesName()) {
-			continue
-		}
+	for _, c := range reqs {
 		cs := computed_series.NewComputedSeries(
 			c.SeriesName,
 			c.Function,
-			c.Seconds,
+			c.Duration,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 	}
 
-	return sub
+	for idx, cs := range sub.allComputed {
+		sub.positions[cs.OutputSeriesName()] = idx + 1
+	}
+
+	return sub, nil
 }
 
 func (sub *Subscription) GetInitialData(
@@ -79,17 +74,17 @@ func (sub *Subscription) GetInitialData(
 
 	computedMap := map[string]*computed_series.ComputedSeries{} // keyed by output series name
 	for _, cs := range sub.allComputed {
-		computedMap[cs.OutputSeriesName] = cs
+		computedMap[cs.OutputSeriesName()] = cs
 	}
 
-	allSeries := make([]schema.Series, len(sub.seriesNames))
-	for idx, name := range sub.seriesNames {
+	allSeries := make([]schema.Series, len(sub.allComputed))
+	for idx, cs := range sub.allComputed {
 		var err error
 		// TODO: we should have better dispatch here, e.g., through an interface
-		if cs, ok := computedMap[name]; ok {
+		if cs.FunctionName() == "" {
 			allSeries[idx], err = cs.LoadInitial(db, start, now)
 		} else {
-			allSeries[idx], err = db.LoadDataWindow(name, start)
+			allSeries[idx], err = db.LoadDataWindow(cs.InputSeriesName, start)
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "load data window")
@@ -113,11 +108,11 @@ func (sub *Subscription) PackRow(
 	timestamp time.Time,
 	value float64,
 ) error {
-	row := make([]any, len(sub.seriesNames)+1)
+	row := make([]any, len(sub.allComputed)+1)
 	row[0] = timestamp.UnixMilli()
 
 	// first fill with nils
-	for i := 0; i < len(sub.seriesNames); i++ {
+	for i := 0; i < len(sub.allComputed); i++ {
 		row[i+1] = nil
 	}
 

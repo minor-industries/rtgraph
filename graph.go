@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
-	"github.com/minor-industries/rtgraph/computed_request"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/internal/subscription"
@@ -23,19 +22,13 @@ type Graph struct {
 	server   *gin.Engine
 	dbWriter *database.DBWriter
 	db       storage.StorageBackend
-	computed map[string]computed_request.ComputedReq
 }
 
 func New(
 	backend storage.StorageBackend,
 	errCh chan error,
 	seriesNames []string,
-	computed []computed_request.ComputedReq,
 ) (*Graph, error) {
-	for _, c := range computed {
-		seriesNames = append(seriesNames, c.OutputSeriesName())
-	}
-
 	err := backend.CreateSeries(seriesNames)
 	if err != nil {
 		return nil, errors.Wrap(err, "load series")
@@ -54,11 +47,6 @@ func New(
 		errCh:    errCh,
 		server:   server,
 		dbWriter: database.NewDBWriter(backend, errCh, 100),
-		computed: map[string]computed_request.ComputedReq{},
-	}
-
-	for _, req := range computed {
-		g.computed[req.OutputSeriesName()] = req
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -66,7 +54,6 @@ func New(
 	}
 
 	go g.publishPrometheusMetrics()
-	//go g.computeDerivedSeries(backend, errCh, computed)
 	go g.dbWriter.Run()
 	go g.publishToDB()
 	go br.Start()
@@ -114,7 +101,13 @@ func (g *Graph) Subscribe(
 		return
 	}
 
-	sub := subscription.NewSubscription(g.computed, req)
+	sub, err := subscription.NewSubscription(req)
+	if err != nil {
+		_ = callback(&messages.Data{
+			Error: errors.Wrap(err, "new subscription").Error(),
+		})
+		return
+	}
 
 	windowSize := time.Duration(req.WindowSize) * time.Millisecond
 	start := now.Add(-windowSize)
@@ -149,11 +142,14 @@ func (g *Graph) Subscribe(
 			}
 
 			if css, ok := computedMap[msg.SeriesName]; ok {
-				computeAndPublishOutputSeries(css, msg, seriesCh)
-			}
-
-			if sub.AllSeries.Has(msg.SeriesName) {
-				seriesCh <- msg
+				for _, cs := range css {
+					// TODO: need better dispatch here
+					if cs.FunctionName() == "" {
+						seriesCh <- msg
+					} else {
+						computeAndPublishOutputSeries(cs, msg, seriesCh)
+					}
+				}
 			}
 		}
 	}()
@@ -175,26 +171,26 @@ func (g *Graph) Subscribe(
 }
 
 func computeAndPublishOutputSeries(
-	css []*computed_series.ComputedSeries,
+	cs *computed_series.ComputedSeries,
 	msg schema.Series,
 	seriesCh chan schema.Series,
 ) {
-	for _, cs := range css {
-		for _, v := range msg.Values {
-			value, ok := cs.ProcessNewValue(v)
-			if !ok {
-				continue
-			}
-			seriesCh <- schema.Series{
-				SeriesName: cs.OutputSeriesName,
-				Values: []schema.Value{{
-					Timestamp: v.Timestamp,
-					Value:     value,
-				}},
-				Persisted: false,
-			}
+
+	for _, v := range msg.Values {
+		value, ok := cs.ProcessNewValue(v)
+		if !ok {
+			continue
+		}
+		seriesCh <- schema.Series{
+			SeriesName: cs.OutputSeriesName(),
+			Values: []schema.Value{{
+				Timestamp: v.Timestamp,
+				Value:     value,
+			}},
+			Persisted: false,
 		}
 	}
+
 }
 
 func (g *Graph) monitorDrops() {

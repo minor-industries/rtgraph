@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/minor-industries/rtgraph"
-	"github.com/minor-industries/rtgraph/computed_request"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
@@ -39,18 +38,6 @@ func run() error {
 		[]string{
 			"sample1",
 			"sample2",
-		},
-		[]computed_request.ComputedReq{
-			{
-				SeriesName: "sample1",
-				Function:   "avg",
-				Seconds:    30,
-			},
-			{
-				SeriesName: "sample2",
-				Function:   "avg",
-				Seconds:    90,
-			},
 		},
 	)
 	if err != nil {
