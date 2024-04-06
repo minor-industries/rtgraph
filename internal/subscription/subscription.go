@@ -3,6 +3,7 @@ package subscription
 import (
 	"fmt"
 	"github.com/chrispappas/golang-generics-set/set"
+	"github.com/minor-industries/rtgraph/computed_request"
 	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
@@ -29,7 +30,7 @@ type Subscription struct {
 }
 
 func NewSubscription(
-	computed map[string]computed_series.ComputedReq,
+	computed map[string]computed_request.ComputedReq,
 	req *SubscriptionRequest,
 ) *Subscription {
 	positions := map[string]int{}

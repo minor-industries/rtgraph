@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
+	"github.com/minor-industries/rtgraph/computed_request"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/internal/subscription"
@@ -22,14 +23,14 @@ type Graph struct {
 	server   *gin.Engine
 	dbWriter *database.DBWriter
 	db       storage.StorageBackend
-	computed map[string]computed_series.ComputedReq
+	computed map[string]computed_request.ComputedReq
 }
 
 func New(
 	backend storage.StorageBackend,
 	errCh chan error,
 	seriesNames []string,
-	computed []computed_series.ComputedReq,
+	computed []computed_request.ComputedReq,
 ) (*Graph, error) {
 	for _, c := range computed {
 		seriesNames = append(seriesNames, c.OutputSeriesName())
@@ -53,7 +54,7 @@ func New(
 		errCh:    errCh,
 		server:   server,
 		dbWriter: database.NewDBWriter(backend, errCh, 100),
-		computed: map[string]computed_series.ComputedReq{},
+		computed: map[string]computed_request.ComputedReq{},
 	}
 
 	for _, req := range computed {

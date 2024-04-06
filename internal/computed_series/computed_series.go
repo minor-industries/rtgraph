@@ -9,20 +9,6 @@ import (
 	"time"
 )
 
-type ComputedReq struct {
-	SeriesName string
-	Function   string
-	Seconds    uint
-}
-
-func (req *ComputedReq) OutputSeriesName() string {
-	return fmt.Sprintf("%s_%s_%ds", req.SeriesName, req.Function, req.Seconds)
-}
-
-func (req *ComputedReq) InputSeriesName() string {
-	return req.SeriesName
-}
-
 type ComputedSeries struct {
 	values           *list.List
 	InputSeriesName  string // TODO: make private?
