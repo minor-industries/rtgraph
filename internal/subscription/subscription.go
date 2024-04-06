@@ -122,15 +122,15 @@ func (sub *Subscription) PackRow(
 	}
 	row[pos] = floatP(float32(value))
 
-	seen, ok := sub.lastSeen[pos]
-	sub.lastSeen[pos] = timestamp
-
 	addGap := func() {
 		gap := make([]any, len(row))
 		copy(gap, row)
 		gap[pos] = math.NaN()
 		data.Rows = append(data.Rows, gap)
 	}
+
+	seen, ok := sub.lastSeen[pos]
+	sub.lastSeen[pos] = timestamp
 
 	if ok {
 		dt := timestamp.Sub(seen)
