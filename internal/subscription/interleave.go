@@ -11,7 +11,7 @@ func floatP(v float32) *float32 {
 
 func interleave(
 	allSeries []schema.Series,
-	f func(seriesName string, value schema.Value) error,
+	f func(index int, value schema.Value) error,
 ) error {
 	// TODO: interleave could use some tests!
 	indices := make([]int, len(allSeries))
@@ -42,7 +42,7 @@ func interleave(
 
 		minSeries := allSeries[minIdx]
 		j := indices[minIdx]
-		if err := f(minSeries.SeriesName, minSeries.Values[j]); err != nil {
+		if err := f(minIdx, minSeries.Values[j]); err != nil {
 			return err
 		}
 		indices[minIdx]++

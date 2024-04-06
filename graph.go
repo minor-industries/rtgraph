@@ -155,17 +155,17 @@ func (g *Graph) Subscribe(
 	}()
 
 	for series := range seriesCh {
-		for _, v := range series.Values {
-			data := &messages.Data{Rows: []interface{}{}}
-			// TODO: don't love how data is passed in here, can we return the row (or do something else)?
-			err := sub.PackRow(data, series.SeriesName, v.Timestamp, v.Value)
-			if err != nil {
-				panic(err) // TODO
-			}
-			if err := callback(data); err != nil {
-				fmt.Println(errors.Wrap(err, "callback error"))
-				return
-			}
+		data, err := sub.PackRows(series)
+		if err != nil {
+			_ = callback(&messages.Data{
+				Error: errors.Wrap(err, "pack rows").Error(),
+			})
+			return
+		}
+
+		if err := callback(data); err != nil {
+			fmt.Println(errors.Wrap(err, "callback error"))
+			return
 		}
 	}
 }

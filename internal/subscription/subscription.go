@@ -92,9 +92,9 @@ func (sub *Subscription) GetInitialData(
 	}
 
 	rows := &messages.Data{Rows: []any{}}
-	if err := interleave(allSeries, func(seriesName string, value schema.Value) error {
-		// TODO: can we rewrite PackRow so that it can't error?
-		return sub.PackRow(rows, seriesName, value.Timestamp, value.Value)
+	if err := interleave(allSeries, func(idx int, value schema.Value) error {
+		// TODO: can we rewrite packRow so that it can't error?
+		return sub.packRow(rows, idx+1, value.Timestamp, value.Value)
 	}); err != nil {
 		return nil, errors.Wrap(err, "interleave")
 	}
@@ -102,9 +102,9 @@ func (sub *Subscription) GetInitialData(
 	return rows, nil
 }
 
-func (sub *Subscription) PackRow(
+func (sub *Subscription) packRow(
 	data *messages.Data,
-	seriesName string,
+	pos int,
 	timestamp time.Time,
 	value float64,
 ) error {
@@ -116,10 +116,6 @@ func (sub *Subscription) PackRow(
 		row[i+1] = nil
 	}
 
-	pos, ok := sub.positions[seriesName]
-	if !ok {
-		return fmt.Errorf("found value with unknown series: %s", seriesName)
-	}
 	row[pos] = floatP(float32(value))
 
 	addGap := func() {
@@ -153,4 +149,23 @@ func (sub *Subscription) InputMap() map[string][]*computed_series.ComputedSeries
 		result[inName] = append(result[inName], cs)
 	}
 	return result
+}
+
+func (sub *Subscription) PackRows(s schema.Series) (*messages.Data, error) {
+	pos, ok := sub.positions[s.SeriesName]
+	if !ok {
+		return nil, fmt.Errorf("found value with unknown series: %s", s.SeriesName)
+	}
+
+	data := &messages.Data{Rows: []interface{}{}}
+
+	for _, v := range s.Values {
+		// TODO: don't love how data is passed in here, can we return the row (or do something else)?
+		err := sub.packRow(data, pos, v.Timestamp, v.Value)
+		if err != nil {
+			return nil, errors.Wrap(err, "pack row")
+		}
+	}
+
+	return data, nil
 }
