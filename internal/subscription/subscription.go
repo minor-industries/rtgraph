@@ -20,7 +20,7 @@ type SubscriptionRequest struct {
 
 type Subscription struct {
 	positions   map[string]int
-	lastSeen    map[string]time.Time
+	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
 	allComputed []*computed_series.ComputedSeries
 }
@@ -36,7 +36,7 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 	}
 
 	sub := &Subscription{
-		lastSeen:  map[string]time.Time{},
+		lastSeen:  map[int]time.Time{},
 		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
 		positions: map[string]int{},
 	}
@@ -122,8 +122,8 @@ func (sub *Subscription) PackRow(
 	}
 	row[pos] = floatP(float32(value))
 
-	seen, ok := sub.lastSeen[seriesName]
-	sub.lastSeen[seriesName] = timestamp
+	seen, ok := sub.lastSeen[pos]
+	sub.lastSeen[pos] = timestamp
 
 	addGap := func() {
 		gap := make([]any, len(row))
