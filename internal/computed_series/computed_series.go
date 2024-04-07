@@ -1,8 +1,8 @@
 package computed_series
 
 import (
-	"container/list"
 	"fmt"
+	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
@@ -10,7 +10,7 @@ import (
 )
 
 type ComputedSeries struct {
-	values          *list.List
+	values          *deque.Deque[schema.Value]
 	InputSeriesName string // TODO: make private?
 	fcn             string
 	duration        time.Duration
@@ -18,7 +18,7 @@ type ComputedSeries struct {
 
 func NewComputedSeries(inputSeriesName string, fcn string, duration time.Duration) *ComputedSeries {
 	cs := &ComputedSeries{
-		values:          list.New(),
+		values:          deque.New[schema.Value](0, 64),
 		InputSeriesName: inputSeriesName,
 		duration:        duration,
 		fcn:             fcn,
@@ -52,10 +52,13 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 	cutoff := now.Add(dt)
 
 	for {
-		e := cs.values.Front()
-		v := e.Value.(schema.Value)
+		if cs.values.Len() == 0 {
+			break
+		}
+
+		v := cs.values.Front()
 		if v.Timestamp.Before(cutoff) {
-			cs.values.Remove(e)
+			cs.values.PopFront()
 		} else {
 			break
 		}
@@ -65,8 +68,9 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 func (cs *ComputedSeries) computeAvg() (float64, bool) {
 	sum := 0.0
 	count := 0
-	for e := cs.values.Front(); e != nil; e = e.Next() {
-		v := e.Value.(schema.Value)
+
+	for i := 0; i < cs.values.Len(); i++ {
+		v := cs.values.At(i)
 		if v.Value == 0 { // ignore zeros in the calculation
 			continue
 		}
