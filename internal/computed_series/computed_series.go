@@ -76,20 +76,29 @@ func (cs *ComputedSeries) LoadInitial(
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
 
-	return cs.ProcessNewValues(window.Values), nil
+	return cs.processNewValues(window.Values, start), nil
 }
 
-func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series {
+func (cs *ComputedSeries) processNewValues(
+	values []schema.Value,
+	start time.Time, // only produce values after start time
+) schema.Series {
 	result := make([]schema.Value, 0, len(values))
 
 	for _, v := range values {
 		cs.fcn.AddValue(v)
 		cs.values.PushBack(v)
 		cs.removeOld(v.Timestamp)
+
+		if v.Timestamp.Before(start) {
+			continue
+		}
+
 		newValue, ok := cs.fcn.Compute(cs.values)
 		if !ok {
 			continue
 		}
+
 		result = append(result, schema.Value{
 			Timestamp: v.Timestamp,
 			Value:     newValue,
@@ -100,4 +109,8 @@ func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series 
 		SeriesName: cs.OutputSeriesName(),
 		Values:     result,
 	}
+}
+
+func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series {
+	return cs.processNewValues(values, time.Time{})
 }
