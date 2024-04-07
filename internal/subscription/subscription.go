@@ -70,7 +70,6 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 func (sub *Subscription) GetInitialData(
 	db storage.StorageBackend,
 	windowStart time.Time,
-	now time.Time,
 	lastPointMs uint64,
 ) (*messages.Data, error) {
 	start := windowStart // by default
@@ -94,7 +93,7 @@ func (sub *Subscription) GetInitialData(
 		if cs.FunctionName() == "" {
 			allSeries[idx], err = db.LoadDataWindow(cs.InputSeriesName, start)
 		} else {
-			allSeries[idx], err = cs.LoadInitial(db, start, now)
+			allSeries[idx], err = cs.LoadInitial(db, start)
 		}
 		if err != nil {
 			return nil, errors.Wrap(err, "load data window")

@@ -67,11 +67,9 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 func (cs *ComputedSeries) LoadInitial(
 	db storage.StorageBackend,
 	start time.Time,
-	now time.Time,
 ) (schema.Series, error) {
 	// TODO: LoadInitial could use some tests
 	lookBack := -cs.duration
-	historyCutoff := now.Add(lookBack)
 	window, err := db.LoadDataWindow(
 		cs.InputSeriesName,
 		start.Add(lookBack),
@@ -82,39 +80,17 @@ func (cs *ComputedSeries) LoadInitial(
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
 
-	count := 0
-	sum := 0.0
 	values := window.Values
 	result := make([]schema.Value, 0, len(values))
 
-	// TODO: avg function is hardcoded in code below
-
-	for end, bgn := 0, 0; end < len(values); end++ {
-		endPt := values[end]
-		count++
-		sum += endPt.Value
-		cutoff := endPt.Timestamp.Add(lookBack)
-		for ; bgn < end; bgn++ {
-			bgnPt := values[bgn]
-			if bgnPt.Timestamp.After(cutoff) {
-				break
-			}
-			count--
-			sum -= bgnPt.Value
+	for _, v := range values {
+		newValue, ok := cs.ProcessNewValue(v)
+		if ok {
+			result = append(result, schema.Value{
+				Timestamp: v.Timestamp,
+				Value:     newValue,
+			})
 		}
-		if endPt.Timestamp.After(historyCutoff) {
-			// TODO: I don't like how we're mixing this in here
-			cs.fcn.AddValue(endPt)
-			cs.values.PushBack(endPt)
-		}
-		if endPt.Timestamp.Before(start) {
-			continue
-		}
-		value := sum / float64(count)
-		result = append(result, schema.Value{
-			Timestamp: endPt.Timestamp,
-			Value:     value,
-		})
 	}
 
 	return schema.Series{
