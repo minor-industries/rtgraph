@@ -67,18 +67,21 @@ func (g *Graph) setupServer() error {
 
 		now := time.Now()
 
-		g.Subscribe(&req, now, func(data *messages.Data) error {
+		msgCh := make(chan *messages.Data)
+
+		go g.Subscribe(&req, now, msgCh)
+
+		for data := range msgCh {
 			binmsg, err := data.MarshalMsg(nil)
 			if err != nil {
-				return errors.Wrap(err, "marshal msg")
+				panic(errors.Wrap(err, "marshal msg")) // TODO
 			}
 
 			if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
-				return errors.Wrap(err, "write binary")
+				fmt.Println(errors.Wrap(err, "write binary to websocket"))
+				return
 			}
-
-			return nil
-		})
+		}
 	})
 
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))

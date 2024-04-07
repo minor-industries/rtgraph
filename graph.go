@@ -92,20 +92,17 @@ func (g *Graph) CreateValue(
 func (g *Graph) Subscribe(
 	req *subscription.SubscriptionRequest,
 	now time.Time,
-	callback func(data *messages.Data) error,
+	msgCh chan *messages.Data,
 ) {
-	if err := callback(&messages.Data{
+	msgCh <- &messages.Data{
 		Now: uint64(now.UnixMilli()),
-	}); err != nil {
-		fmt.Println(errors.Wrap(err, "callback error"))
-		return
 	}
 
 	sub, err := subscription.NewSubscription(req)
 	if err != nil {
-		_ = callback(&messages.Data{
+		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),
-		})
+		}
 		return
 	}
 
@@ -114,18 +111,13 @@ func (g *Graph) Subscribe(
 
 	initialData, err := sub.GetInitialData(g.db, start, req.LastPointMs)
 	if err != nil {
-		_ = callback(&messages.Data{
+		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
-		})
+		}
 		return
 	}
 
-	err = callback(initialData)
-	if err != nil {
-		fmt.Println(errors.Wrap(err, "callback error"))
-		return
-	}
-
+	msgCh <- initialData
 	seriesCh := make(chan schema.Series)
 	// TODO: need to close all these channels, etc
 
@@ -157,16 +149,12 @@ func (g *Graph) Subscribe(
 	for series := range seriesCh {
 		data, err := sub.PackRows(series)
 		if err != nil {
-			_ = callback(&messages.Data{
+			msgCh <- &messages.Data{
 				Error: errors.Wrap(err, "pack rows").Error(),
-			})
+			}
 			return
 		}
-
-		if err := callback(data); err != nil {
-			fmt.Println(errors.Wrap(err, "callback error"))
-			return
-		}
+		msgCh <- data
 	}
 }
 
