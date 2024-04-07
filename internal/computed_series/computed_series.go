@@ -80,28 +80,28 @@ func (cs *ComputedSeries) LoadInitial(
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
 
-	values := window.Values
+	return cs.ProcessNewValues(window.Values), nil
+}
+
+func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series {
 	result := make([]schema.Value, 0, len(values))
 
 	for _, v := range values {
-		newValue, ok := cs.ProcessNewValue(v)
-		if ok {
-			result = append(result, schema.Value{
-				Timestamp: v.Timestamp,
-				Value:     newValue,
-			})
+		cs.fcn.AddValue(v)
+		cs.values.PushBack(v)
+		cs.removeOld(v.Timestamp)
+		newValue, ok := cs.compute()
+		if !ok {
+			continue
 		}
+		result = append(result, schema.Value{
+			Timestamp: v.Timestamp,
+			Value:     newValue,
+		})
 	}
 
 	return schema.Series{
 		SeriesName: cs.OutputSeriesName(),
 		Values:     result,
-	}, nil
-}
-
-func (cs *ComputedSeries) ProcessNewValue(v schema.Value) (float64, bool) {
-	cs.fcn.AddValue(v)
-	cs.values.PushBack(v)
-	cs.removeOld(v.Timestamp)
-	return cs.compute()
+	}
 }

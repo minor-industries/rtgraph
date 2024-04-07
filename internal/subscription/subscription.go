@@ -219,7 +219,7 @@ func (sub *Subscription) Run(
 					if cs.FunctionName() == "" {
 						seriesCh <- msg
 					} else {
-						computeAndPublishOutputSeries(cs, msg, seriesCh)
+						seriesCh <- cs.ProcessNewValues(msg.Values)
 					}
 				}
 			}
@@ -235,27 +235,5 @@ func (sub *Subscription) Run(
 			return
 		}
 		msgCh <- data
-	}
-}
-
-func computeAndPublishOutputSeries(
-	cs *computed_series.ComputedSeries,
-	msg schema.Series,
-	seriesCh chan schema.Series,
-) {
-
-	for _, v := range msg.Values {
-		value, ok := cs.ProcessNewValue(v)
-		if !ok {
-			continue
-		}
-		seriesCh <- schema.Series{
-			SeriesName: cs.OutputSeriesName(),
-			Values: []schema.Value{{
-				Timestamp: v.Timestamp,
-				Value:     value,
-			}},
-			Persisted: false,
-		}
 	}
 }
