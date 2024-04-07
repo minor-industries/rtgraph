@@ -196,35 +196,11 @@ func (sub *Subscription) Run(
 		}
 		return
 	}
-
 	msgCh <- initialData
-	seriesCh := make(chan schema.Series)
-	// TODO: need to close all these channels, etc
 
-	go func() {
-		msgCh := broker.Subscribe()
-		defer broker.Unsubscribe(msgCh)
+	seriesCh := make(chan schema.Series) // TODO: need to close all these channels, etc
 
-		computedMap := sub.inputMap()
-
-		for m := range msgCh {
-			msg, ok := m.(schema.Series)
-			if !ok {
-				continue
-			}
-
-			if css, ok := computedMap[msg.SeriesName]; ok {
-				for _, cs := range css {
-					// TODO: need better dispatch here
-					if cs.FunctionName() == "" {
-						seriesCh <- msg
-					} else {
-						seriesCh <- cs.ProcessNewValues(msg.Values)
-					}
-				}
-			}
-		}
-	}()
+	go sub.produceAllSeries(broker, seriesCh)
 
 	for series := range seriesCh {
 		data, err := sub.packRows(series)
@@ -235,5 +211,33 @@ func (sub *Subscription) Run(
 			return
 		}
 		msgCh <- data
+	}
+}
+
+func (sub *Subscription) produceAllSeries(
+	broker *broker.Broker,
+	output chan schema.Series,
+) {
+	msgCh := broker.Subscribe()
+	defer broker.Unsubscribe(msgCh)
+
+	computedMap := sub.inputMap()
+
+	for m := range msgCh {
+		msg, ok := m.(schema.Series)
+		if !ok {
+			continue
+		}
+
+		if css, ok := computedMap[msg.SeriesName]; ok {
+			for _, cs := range css {
+				// TODO: need better dispatch here
+				if cs.FunctionName() == "" {
+					output <- msg
+				} else {
+					output <- cs.ProcessNewValues(msg.Values)
+				}
+			}
+		}
 	}
 }
