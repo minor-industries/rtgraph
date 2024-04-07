@@ -41,11 +41,21 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 		positions: map[string]int{},
 	}
 
-	for _, c := range reqs {
+	for _, r := range reqs {
+		var fcn computed_series.Fcn
+		var err error
+
+		if r.Function != "" {
+			fcn, err = computed_series.GetFcn(r.Function)
+			if err != nil {
+				return nil, errors.Wrap(err, "get fcn")
+			}
+		}
+
 		cs := computed_series.NewComputedSeries(
-			c.SeriesName,
-			c.Function,
-			c.Duration,
+			r.SeriesName,
+			fcn,
+			r.Duration,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 	}

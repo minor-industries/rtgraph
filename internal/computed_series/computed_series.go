@@ -12,11 +12,11 @@ import (
 type ComputedSeries struct {
 	values          *deque.Deque[schema.Value]
 	InputSeriesName string // TODO: make private?
-	fcn             string
+	fcn             Fcn
 	duration        time.Duration
 }
 
-func NewComputedSeries(inputSeriesName string, fcn string, duration time.Duration) *ComputedSeries {
+func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration) *ComputedSeries {
 	cs := &ComputedSeries{
 		values:          deque.New[schema.Value](0, 64),
 		InputSeriesName: inputSeriesName,
@@ -28,23 +28,21 @@ func NewComputedSeries(inputSeriesName string, fcn string, duration time.Duratio
 }
 
 func (cs *ComputedSeries) FunctionName() string {
-	return cs.fcn
+	if cs.fcn == nil {
+		return ""
+	}
+	return cs.fcn.Name()
 }
 
 func (cs *ComputedSeries) OutputSeriesName() string {
-	if cs.fcn == "" {
+	if cs.fcn == nil {
 		return cs.InputSeriesName
 	}
-	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn, cs.duration.String())
+	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn.Name(), cs.duration.String())
 }
 
 func (cs *ComputedSeries) compute() (float64, bool) {
-	switch cs.fcn {
-	case "avg":
-		return cs.computeAvg()
-	default:
-		panic("unknown function") // TODO
-	}
+	return cs.fcn.Compute(cs.values)
 }
 
 func (cs *ComputedSeries) removeOld(now time.Time) {
@@ -58,31 +56,12 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 
 		v := cs.values.Front()
 		if v.Timestamp.Before(cutoff) {
+			cs.fcn.RemoveValue(v)
 			cs.values.PopFront()
 		} else {
 			break
 		}
 	}
-}
-
-func (cs *ComputedSeries) computeAvg() (float64, bool) {
-	sum := 0.0
-	count := 0
-
-	for i := 0; i < cs.values.Len(); i++ {
-		v := cs.values.At(i)
-		if v.Value == 0 { // ignore zeros in the calculation
-			continue
-		}
-		sum += v.Value
-		count++
-	}
-
-	if count > 0 {
-		return sum / float64(count), true
-	}
-
-	return 0, false
 }
 
 func (cs *ComputedSeries) LoadInitial(
@@ -125,6 +104,7 @@ func (cs *ComputedSeries) LoadInitial(
 		}
 		if endPt.Timestamp.After(historyCutoff) {
 			// TODO: I don't like how we're mixing this in here
+			cs.fcn.AddValue(endPt)
 			cs.values.PushBack(endPt)
 		}
 		if endPt.Timestamp.Before(start) {
@@ -144,6 +124,7 @@ func (cs *ComputedSeries) LoadInitial(
 }
 
 func (cs *ComputedSeries) ProcessNewValue(v schema.Value) (float64, bool) {
+	cs.fcn.AddValue(v)
 	cs.values.PushBack(v)
 	cs.removeOld(v.Timestamp)
 	return cs.compute()
