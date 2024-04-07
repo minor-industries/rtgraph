@@ -41,10 +41,6 @@ func (cs *ComputedSeries) OutputSeriesName() string {
 	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn.Name(), cs.duration.String())
 }
 
-func (cs *ComputedSeries) compute() (float64, bool) {
-	return cs.fcn.Compute(cs.values)
-}
-
 func (cs *ComputedSeries) removeOld(now time.Time) {
 	dt := -cs.duration
 	cutoff := now.Add(dt)
@@ -90,7 +86,7 @@ func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series 
 		cs.fcn.AddValue(v)
 		cs.values.PushBack(v)
 		cs.removeOld(v.Timestamp)
-		newValue, ok := cs.compute()
+		newValue, ok := cs.fcn.Compute(cs.values)
 		if !ok {
 			continue
 		}
