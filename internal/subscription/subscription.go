@@ -81,11 +81,6 @@ func (sub *Subscription) GetInitialData(
 		}
 	}
 
-	computedMap := map[string]*computed_series.ComputedSeries{} // keyed by output series name
-	for _, cs := range sub.allComputed {
-		computedMap[cs.OutputSeriesName()] = cs
-	}
-
 	allSeries := make([]schema.Series, len(sub.allComputed))
 	for idx, cs := range sub.allComputed {
 		var err error
