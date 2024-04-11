@@ -18,6 +18,21 @@ type SubscriptionRequest struct {
 	MaxGapMs    uint64   `json:"maxGapMs"`
 }
 
+func (req *SubscriptionRequest) Start(now time.Time) time.Time {
+	windowSize := time.Duration(req.WindowSize) * time.Millisecond
+	windowStart := now.Add(-windowSize)
+
+	if req.LastPointMs != 0 {
+		tStartAfter := time.UnixMilli(int64(req.LastPointMs + 1))
+		if tStartAfter.After(windowStart) {
+			// only use if inside the start window
+			return tStartAfter
+		}
+	}
+
+	return windowStart
+}
+
 type Subscription struct {
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
@@ -25,7 +40,10 @@ type Subscription struct {
 	operators   []computed_series.Operator
 }
 
-func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
+func NewSubscription(
+	req *SubscriptionRequest,
+	now time.Time,
+) (*Subscription, error) {
 	var reqs []computed_series.SeriesRequest
 	for _, sn := range req.Series {
 		req, err := computed_series.Parse(sn)
@@ -56,6 +74,7 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 			r.SeriesName,
 			fcn,
 			r.Duration,
+			req.Start(now),
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 
@@ -71,36 +90,26 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 
 func (sub *Subscription) getInitialData(
 	db storage.StorageBackend,
-	windowStart time.Time,
-	lastPointMs uint64,
+	start time.Time,
 ) (*messages.Data, error) {
-	start := windowStart // by default
-	if lastPointMs != 0 {
-		tStartAfter := time.UnixMilli(int64(lastPointMs + 1))
-		if tStartAfter.After(windowStart) {
-			// only use if inside the start window
-			start = tStartAfter
-		}
-	}
 
 	allSeries := make([][]schema.Value, len(sub.allComputed))
 	for idx, cs := range sub.allComputed {
-		var err error
-		// TODO: we should have better dispatch here, e.g., through an interface
-		// or perhaps this just all goes through the same code path with an identity transformer
-		if cs.FunctionName() == "" {
-			var series schema.Series
-			series, err = db.LoadDataWindow(cs.InputSeriesName, start)
-			if err != nil {
-				return nil, errors.Wrap(err, "load data window")
-			}
-			allSeries[idx] = series.Values
-		} else {
-			allSeries[idx], err = cs.LoadInitial(db, start)
-			if err != nil {
-				return nil, errors.Wrap(err, "load initial")
-			}
+		op := sub.operators[idx]
+		var lookback time.Duration = 0
+		if wo, ok := op.(computed_series.WindowedOperator); ok {
+			lookback = wo.Lookback()
 		}
+
+		window, err := db.LoadDataWindow(
+			cs.InputSeriesName,
+			start.Add(lookback),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "load original window")
+		}
+
+		allSeries[idx] = op.ProcessNewValues(window.Values)
 	}
 
 	rows := &messages.Data{Rows: []any{}}
@@ -189,10 +198,7 @@ func (sub *Subscription) Run(
 		Now: uint64(now.UnixMilli()),
 	}
 
-	windowSize := time.Duration(req.WindowSize) * time.Millisecond
-	start := now.Add(-windowSize)
-
-	initialData, err := sub.getInitialData(db, start, req.LastPointMs)
+	initialData, err := sub.getInitialData(db, req.Start(now))
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),

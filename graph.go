@@ -93,7 +93,7 @@ func (g *Graph) Subscribe(
 	now time.Time,
 	msgCh chan *messages.Data,
 ) {
-	sub, err := subscription.NewSubscription(req)
+	sub, err := subscription.NewSubscription(req, now)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
-	"github.com/minor-industries/rtgraph/storage"
-	"github.com/pkg/errors"
 	"time"
 )
 
@@ -14,14 +12,21 @@ type ComputedSeries struct {
 	InputSeriesName string // TODO: make private?
 	fcn             Fcn
 	duration        time.Duration
+	start           time.Time // only produce values after start
 }
 
-func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration) *ComputedSeries {
+func NewComputedSeries(
+	inputSeriesName string,
+	fcn Fcn,
+	duration time.Duration,
+	start time.Time,
+) *ComputedSeries {
 	cs := &ComputedSeries{
 		values:          deque.New[schema.Value](0, 64),
 		InputSeriesName: inputSeriesName,
 		duration:        duration,
 		fcn:             fcn,
+		start:           start,
 	}
 
 	return cs
@@ -60,28 +65,8 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 	}
 }
 
-func (cs *ComputedSeries) LoadInitial(
-	db storage.StorageBackend,
-	start time.Time,
-) ([]schema.Value, error) {
-	// TODO: LoadInitial could use some tests
-	lookBack := -cs.duration
-	window, err := db.LoadDataWindow(
-		cs.InputSeriesName,
-		start.Add(lookBack),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "load original window")
-	}
-
-	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
-
-	return cs.processNewValues(window.Values, start), nil
-}
-
-func (cs *ComputedSeries) processNewValues(
+func (cs *ComputedSeries) ProcessNewValues(
 	values []schema.Value,
-	start time.Time, // only produce values after start time
 ) []schema.Value {
 	result := make([]schema.Value, 0, len(values))
 
@@ -90,7 +75,7 @@ func (cs *ComputedSeries) processNewValues(
 		cs.values.PushBack(v)
 		cs.removeOld(v.Timestamp)
 
-		if v.Timestamp.Before(start) {
+		if v.Timestamp.Before(cs.start) {
 			continue
 		}
 
@@ -106,8 +91,4 @@ func (cs *ComputedSeries) processNewValues(
 	}
 
 	return result
-}
-
-func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) []schema.Value {
-	return cs.processNewValues(values, time.Time{})
 }
