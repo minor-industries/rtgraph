@@ -36,7 +36,7 @@ func (req *SubscriptionRequest) Start(now time.Time) time.Time {
 type Subscription struct {
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
-	allComputed []*computed_series.ComputedSeries
+	inputSeries []string
 	operators   []computed_series.Operator
 }
 
@@ -54,34 +54,26 @@ func NewSubscription(
 	}
 
 	sub := &Subscription{
-		lastSeen:  map[int]time.Time{},
-		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
-		operators: make([]computed_series.Operator, len(req.Series)),
+		lastSeen:    map[int]time.Time{},
+		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
+		operators:   make([]computed_series.Operator, len(req.Series)),
+		inputSeries: make([]string, len(req.Series)),
 	}
 
 	for idx, r := range reqs {
-		var fcn computed_series.Fcn
-		var err error
-
-		if r.Function != "" {
-			fcn, err = computed_series.GetFcn(r.Function)
-			if err != nil {
-				return nil, errors.Wrap(err, "get fcn")
-			}
-		}
-
-		cs := computed_series.NewComputedSeries(
-			r.SeriesName,
-			fcn,
-			r.Duration,
-			start,
-		)
-		sub.allComputed = append(sub.allComputed, cs)
-
+		sub.inputSeries[idx] = r.SeriesName
 		if r.Function == "" { // TODO: this is a hack
 			sub.operators[idx] = computed_series.Identity{}
 		} else {
-			sub.operators[idx] = cs
+			fcn, err := computed_series.GetFcn(r.Function)
+			if err != nil {
+				return nil, errors.Wrap(err, "get fcn")
+			}
+			sub.operators[idx] = computed_series.NewComputedSeries(
+				fcn,
+				r.Duration,
+				start,
+			)
 		}
 	}
 
@@ -93,16 +85,15 @@ func (sub *Subscription) getInitialData(
 	start time.Time,
 ) (*messages.Data, error) {
 
-	allSeries := make([][]schema.Value, len(sub.allComputed))
-	for idx, cs := range sub.allComputed {
-		op := sub.operators[idx]
+	allSeries := make([][]schema.Value, len(sub.operators))
+	for idx, op := range sub.operators {
 		var lookback time.Duration = 0
 		if wo, ok := op.(computed_series.WindowedOperator); ok {
 			lookback = wo.Lookback()
 		}
 
 		window, err := db.LoadDataWindow(
-			cs.InputSeriesName,
+			sub.inputSeries[idx],
 			start.Add(-lookback),
 		)
 		if err != nil {
@@ -129,11 +120,11 @@ func (sub *Subscription) packRow(
 	timestamp time.Time,
 	value float64,
 ) error {
-	row := make([]any, len(sub.allComputed)+1)
+	row := make([]any, len(sub.operators)+1)
 	row[0] = timestamp.UnixMilli()
 
 	// first fill with nils
-	for i := 0; i < len(sub.allComputed); i++ {
+	for i := 0; i < len(sub.operators); i++ {
 		row[i+1] = nil
 	}
 
@@ -166,8 +157,7 @@ func (sub *Subscription) packRow(
 func (sub *Subscription) inputMap() map[string][]int {
 	// output is map from input series names to indices into the sub.operators array
 	result := map[string][]int{}
-	for idx, cs := range sub.allComputed {
-		inName := cs.InputSeriesName // TODO: would be nice if this worked on operators directly, not allComputed
+	for idx, inName := range sub.inputSeries {
 		result[inName] = append(result[inName], idx)
 	}
 	return result

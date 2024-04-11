@@ -7,11 +7,10 @@ import (
 )
 
 type ComputedSeries struct {
-	values          *deque.Deque[schema.Value]
-	InputSeriesName string // TODO: make private?
-	fcn             Fcn
-	duration        time.Duration
-	start           time.Time // only produce values after start
+	values   *deque.Deque[schema.Value]
+	fcn      Fcn
+	duration time.Duration
+	start    time.Time // only produce values after start
 }
 
 func (cs *ComputedSeries) Lookback() time.Duration {
@@ -19,17 +18,15 @@ func (cs *ComputedSeries) Lookback() time.Duration {
 }
 
 func NewComputedSeries(
-	inputSeriesName string,
 	fcn Fcn,
 	duration time.Duration,
 	start time.Time,
 ) *ComputedSeries {
 	cs := &ComputedSeries{
-		values:          deque.New[schema.Value](0, 64),
-		InputSeriesName: inputSeriesName,
-		duration:        duration,
-		fcn:             fcn,
-		start:           start,
+		values:   deque.New[schema.Value](0, 64),
+		duration: duration,
+		fcn:      fcn,
+		start:    start,
 	}
 
 	return cs

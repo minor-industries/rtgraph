@@ -14,7 +14,3 @@ type SeriesRequest struct {
 func (req *SeriesRequest) OutputSeriesName() string {
 	return fmt.Sprintf("%s_%s_%s", req.SeriesName, req.Function, req.Duration.String())
 }
-
-func (req *SeriesRequest) InputSeriesName() string {
-	return req.SeriesName
-}
