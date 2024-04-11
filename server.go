@@ -58,7 +58,7 @@ func (g *Graph) setupServer() error {
 		}
 		conn.CloseRead(ctx)
 
-		var req subscription.SubscriptionRequest
+		var req subscription.Request
 		err = json.Unmarshal(reqBytes, &req)
 		if wsErr != nil {
 			fmt.Println("ws error", errors.Wrap(err, "unmarshal json"))

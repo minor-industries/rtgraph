@@ -89,7 +89,7 @@ func (g *Graph) CreateValue(
 }
 
 func (g *Graph) Subscribe(
-	req *subscription.SubscriptionRequest,
+	req *subscription.Request,
 	now time.Time,
 	msgCh chan *messages.Data,
 ) {
