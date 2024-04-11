@@ -26,19 +26,11 @@ func (f *FcnAvg) Name() string {
 }
 
 func (f *FcnAvg) AddValue(v schema.Value) {
-	if v.Value == 0.0 {
-		return // ignore zeros in avg calculation
-	}
-
 	f.count++
 	f.sum += v.Value
 }
 
 func (f *FcnAvg) RemoveValue(v schema.Value) {
-	if v.Value == 0.0 {
-		return // ignore zeros in avg calculation
-	}
-
 	f.count--
 	f.sum -= v.Value
 }
