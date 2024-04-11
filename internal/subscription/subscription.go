@@ -12,6 +12,7 @@ import (
 )
 
 type Subscription struct {
+	// TODO: combine inputSeries, operators, lastSeen into struct
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
 	inputSeries []string
