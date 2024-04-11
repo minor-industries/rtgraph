@@ -37,29 +37,56 @@ func Parse(
 	case 1:
 		return series, Identity{}, nil
 	case 2:
-		functionParts := trimSpace(strings.Fields(mainParts[1]))
-		if len(functionParts) != 2 {
-			return "", nil, errors.New("invalid number of function parameters")
-		}
-
-		functionName := functionParts[0]
-		switch functionName {
-		case "avg":
-			duration, err := time.ParseDuration(functionParts[1])
-			if err != nil {
-				return "", nil, errors.Wrap(err, "parse duration")
-			}
-			return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
-		case "gt":
-			x, err := strconv.ParseFloat(functionParts[1], 64)
-			if err != nil {
-				return "", nil, errors.Wrap(err, "invalid float")
-			}
-			return series, OpGt{X: x}, nil
-		default:
-			return "", nil, errors.New("unknown function name")
-		}
+		return parseFunction(series, start, mainParts[1])
 	default:
-		return "", nil, errors.New("only one function supported for now")
+		return parseChain(series, start, mainParts[1:])
 	}
+}
+
+func parseFunction(
+	series string,
+	start time.Time,
+	def string,
+) (string, Operator, error) {
+	functionParts := trimSpace(strings.Fields(def))
+
+	if len(functionParts) != 2 {
+		return "", nil, errors.New("invalid number of function parameters")
+	}
+
+	functionName := functionParts[0]
+	switch functionName {
+	case "avg":
+		duration, err := time.ParseDuration(functionParts[1])
+		if err != nil {
+			return "", nil, errors.Wrap(err, "parse duration")
+		}
+		return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
+	case "gt":
+		x, err := strconv.ParseFloat(functionParts[1], 64)
+		if err != nil {
+			return "", nil, errors.Wrap(err, "invalid float")
+		}
+		return series, OpGt{X: x}, nil
+	default:
+		return "", nil, errors.New("unknown function name")
+	}
+}
+
+func parseChain(
+	series string,
+	start time.Time,
+	defs []string,
+) (string, Operator, error) {
+	var ops []Operator
+
+	for _, def := range defs {
+		_, op, err := parseFunction(series, start, def)
+		if err != nil {
+			return "", nil, errors.Wrap(err, "parse function")
+		}
+		ops = append(ops, op)
+	}
+
+	return series, chain{ops: ops}, nil
 }

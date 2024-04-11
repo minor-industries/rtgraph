@@ -18,14 +18,13 @@
             new Graph(document.getElementById("graphdiv0"), {
                 seriesNames: [
                     "sample1",
-                    "sample1 | avg 30s",
+                    "sample1 | gt 0.2 | avg 30s",
                     "sample2 | gt -0.5"
                 ],
                 title: "Sample Series: {value}",
                 height: 300,
                 windowSize: minute,
                 labels: ["x", "Y1", "Y2", "Y3"],
-                mappers: [x => x * 10.0],
                 series: {
                     Y1: {
                         strokeWidth: 1,
