@@ -1,7 +1,6 @@
 package computed_series
 
 import (
-	"fmt"
 	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
 	"time"
@@ -34,20 +33,6 @@ func NewComputedSeries(
 	}
 
 	return cs
-}
-
-func (cs *ComputedSeries) FunctionName() string {
-	if cs.fcn == nil {
-		return ""
-	}
-	return cs.fcn.Name()
-}
-
-func (cs *ComputedSeries) OutputSeriesName() string {
-	if cs.fcn == nil {
-		return cs.InputSeriesName
-	}
-	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn.Name(), cs.duration.String())
 }
 
 func (cs *ComputedSeries) removeOld(now time.Time) {

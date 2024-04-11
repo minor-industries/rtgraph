@@ -78,7 +78,7 @@ func NewSubscription(
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 
-		if cs.FunctionName() == "" { // TODO: this is a hack
+		if r.Function == "" { // TODO: this is a hack
 			sub.operators[idx] = computed_series.Identity{}
 		} else {
 			sub.operators[idx] = cs
