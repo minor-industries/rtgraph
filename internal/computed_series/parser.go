@@ -2,6 +2,7 @@ package computed_series
 
 import (
 	"github.com/pkg/errors"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -49,6 +50,12 @@ func Parse(
 				return "", nil, errors.Wrap(err, "parse duration")
 			}
 			return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
+		case "gt":
+			x, err := strconv.ParseFloat(functionParts[1], 64)
+			if err != nil {
+				return "", nil, errors.Wrap(err, "invalid float")
+			}
+			return series, OpGt{X: x}, nil
 		default:
 			return "", nil, errors.New("unknown function name")
 		}
