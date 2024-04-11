@@ -22,6 +22,7 @@ type Subscription struct {
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
 	allComputed []*computed_series.ComputedSeries
+	operators   []computed_series.Operator
 }
 
 func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
@@ -35,11 +36,12 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 	}
 
 	sub := &Subscription{
-		lastSeen: map[int]time.Time{},
-		maxGap:   time.Millisecond * time.Duration(req.MaxGapMs),
+		lastSeen:  map[int]time.Time{},
+		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
+		operators: make([]computed_series.Operator, len(req.Series)),
 	}
 
-	for _, r := range reqs {
+	for idx, r := range reqs {
 		var fcn computed_series.Fcn
 		var err error
 
@@ -56,6 +58,12 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 			r.Duration,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
+
+		if cs.FunctionName() == "" { // TODO: this is a hack
+			sub.operators[idx] = computed_series.Identity{}
+		} else {
+			sub.operators[idx] = cs
+		}
 	}
 
 	return sub, nil
@@ -147,10 +155,10 @@ func (sub *Subscription) packRow(
 }
 
 func (sub *Subscription) inputMap() map[string][]int {
-	// output is map from input series names to indices into the sub.allComputed array
+	// output is map from input series names to indices into the sub.operators array
 	result := map[string][]int{}
 	for idx, cs := range sub.allComputed {
-		inName := cs.InputSeriesName
+		inName := cs.InputSeriesName // TODO: would be nice if this worked on operators directly, not allComputed
 		result[inName] = append(result[inName], idx)
 	}
 	return result
@@ -210,14 +218,9 @@ func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *me
 
 		if out, ok := computedMap[msg.SeriesName]; ok {
 			for _, idx := range out {
-				cs := sub.allComputed[idx]
+				op := sub.operators[idx]
 				// TODO: need better dispatch here
-				var output []schema.Value
-				if cs.FunctionName() == "" {
-					output = msg.Values
-				} else {
-					output = cs.ProcessNewValues(msg.Values)
-				}
+				output := op.ProcessNewValues(msg.Values)
 
 				data, err := sub.packRows(output, idx+1)
 				if err != nil {
