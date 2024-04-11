@@ -103,7 +103,7 @@ func (sub *Subscription) getInitialData(
 
 		window, err := db.LoadDataWindow(
 			cs.InputSeriesName,
-			start.Add(lookback),
+			start.Add(-lookback),
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "load original window")

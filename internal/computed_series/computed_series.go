@@ -15,6 +15,10 @@ type ComputedSeries struct {
 	start           time.Time // only produce values after start
 }
 
+func (cs *ComputedSeries) Lookback() time.Duration {
+	return cs.duration
+}
+
 func NewComputedSeries(
 	inputSeriesName string,
 	fcn Fcn,
