@@ -93,7 +93,9 @@ func (g *Graph) Subscribe(
 	now time.Time,
 	msgCh chan *messages.Data,
 ) {
-	sub, err := subscription.NewSubscription(req, now)
+	start := req.Start(now)
+
+	sub, err := subscription.NewSubscription(req, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),
@@ -104,9 +106,9 @@ func (g *Graph) Subscribe(
 	sub.Run(
 		g.db,
 		g.broker,
-		now,
 		msgCh,
-		req,
+		now,
+		start,
 	)
 }
 

@@ -42,7 +42,7 @@ type Subscription struct {
 
 func NewSubscription(
 	req *SubscriptionRequest,
-	now time.Time,
+	start time.Time,
 ) (*Subscription, error) {
 	var reqs []computed_series.SeriesRequest
 	for _, sn := range req.Series {
@@ -74,7 +74,7 @@ func NewSubscription(
 			r.SeriesName,
 			fcn,
 			r.Duration,
-			req.Start(now),
+			start,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 
@@ -190,15 +190,15 @@ func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Dat
 func (sub *Subscription) Run(
 	db storage.StorageBackend,
 	broker *broker.Broker,
-	now time.Time,
 	msgCh chan *messages.Data,
-	req *SubscriptionRequest,
+	now time.Time,
+	start time.Time,
 ) {
 	msgCh <- &messages.Data{
 		Now: uint64(now.UnixMilli()),
 	}
 
-	initialData, err := sub.getInitialData(db, req.Start(now))
+	initialData, err := sub.getInitialData(db, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
