@@ -19,7 +19,6 @@ type SubscriptionRequest struct {
 }
 
 type Subscription struct {
-	positions   map[string]int
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
 	allComputed []*computed_series.ComputedSeries
@@ -36,9 +35,8 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 	}
 
 	sub := &Subscription{
-		lastSeen:  map[int]time.Time{},
-		maxGap:    time.Millisecond * time.Duration(req.MaxGapMs),
-		positions: map[string]int{},
+		lastSeen: map[int]time.Time{},
+		maxGap:   time.Millisecond * time.Duration(req.MaxGapMs),
 	}
 
 	for idx, r := range reqs {
@@ -59,10 +57,6 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 			idx+1,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
-	}
-
-	for idx, cs := range sub.allComputed {
-		sub.positions[cs.OutputSeriesName()] = idx + 1
 	}
 
 	return sub, nil
