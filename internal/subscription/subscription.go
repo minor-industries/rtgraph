@@ -39,7 +39,7 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 		maxGap:   time.Millisecond * time.Duration(req.MaxGapMs),
 	}
 
-	for idx, r := range reqs {
+	for _, r := range reqs {
 		var fcn computed_series.Fcn
 		var err error
 
@@ -54,7 +54,6 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 			r.SeriesName,
 			fcn,
 			r.Duration,
-			idx+1,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 	}
@@ -147,11 +146,12 @@ func (sub *Subscription) packRow(
 	return nil
 }
 
-func (sub *Subscription) inputMap() map[string][]*computed_series.ComputedSeries {
-	result := map[string][]*computed_series.ComputedSeries{}
-	for _, cs := range sub.allComputed {
+func (sub *Subscription) inputMap() map[string][]int {
+	// output is map from input series names to indices into the sub.allComputed array
+	result := map[string][]int{}
+	for idx, cs := range sub.allComputed {
 		inName := cs.InputSeriesName
-		result[inName] = append(result[inName], cs)
+		result[inName] = append(result[inName], idx)
 	}
 	return result
 }
@@ -208,8 +208,9 @@ func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *me
 			continue
 		}
 
-		if css, ok := computedMap[msg.SeriesName]; ok {
-			for _, cs := range css {
+		if out, ok := computedMap[msg.SeriesName]; ok {
+			for _, idx := range out {
+				cs := sub.allComputed[idx]
 				// TODO: need better dispatch here
 				var output []schema.Value
 				if cs.FunctionName() == "" {
@@ -218,7 +219,7 @@ func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *me
 					output = cs.ProcessNewValues(msg.Values)
 				}
 
-				data, err := sub.packRows(output, cs.Position())
+				data, err := sub.packRows(output, idx+1)
 				if err != nil {
 					outMsg <- &messages.Data{
 						Error: errors.Wrap(err, "pack rows").Error(),

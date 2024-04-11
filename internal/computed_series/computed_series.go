@@ -14,16 +14,14 @@ type ComputedSeries struct {
 	InputSeriesName string // TODO: make private?
 	fcn             Fcn
 	duration        time.Duration
-	position        int
 }
 
-func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration, position int) *ComputedSeries {
+func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration) *ComputedSeries {
 	cs := &ComputedSeries{
 		values:          deque.New[schema.Value](0, 64),
 		InputSeriesName: inputSeriesName,
 		duration:        duration,
 		fcn:             fcn,
-		position:        position,
 	}
 
 	return cs
@@ -41,10 +39,6 @@ func (cs *ComputedSeries) OutputSeriesName() string {
 		return cs.InputSeriesName
 	}
 	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn.Name(), cs.duration.String())
-}
-
-func (cs *ComputedSeries) Position() int {
-	return cs.position
 }
 
 func (cs *ComputedSeries) removeOld(now time.Time) {
