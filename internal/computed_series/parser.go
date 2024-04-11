@@ -6,35 +6,53 @@ import (
 	"time"
 )
 
-func Parse(s string) (SeriesRequest, error) {
-	// rower_power,avg,30s
+func trimSpace(parts []string) []string {
+	for i, part := range parts {
+		parts[i] = strings.TrimSpace(part)
+	}
+	return parts
+}
 
-	parts := strings.Split(s, ",")
-	for i, s := range parts {
-		parts[i] = strings.TrimSpace(s)
+func Parse(
+	s string,
+	start time.Time, // TODO: it's weird that we have to pass start in here
+) (string, Operator, error) {
+	if len(s) == 0 {
+		return "", nil, errors.New("empty series")
 	}
 
-	switch len(parts) {
-	case 0:
-		return SeriesRequest{}, errors.New("empty request")
+	mainParts := trimSpace(strings.Split(s, "|"))
+
+	var series string
+	{
+		seriesParts := trimSpace(strings.Fields(mainParts[0]))
+		if len(seriesParts) > 1 {
+			return "", nil, errors.New("invalid series name")
+		}
+		series = seriesParts[0]
+	}
+
+	switch len(mainParts) {
 	case 1:
-		return SeriesRequest{SeriesName: parts[0]}, nil
-	case 3:
-		switch parts[1] {
+		return series, Identity{}, nil
+	case 2:
+		functionParts := trimSpace(strings.Fields(mainParts[1]))
+		if len(functionParts) != 2 {
+			return "", nil, errors.New("invalid number of function parameters")
+		}
+
+		functionName := functionParts[0]
+		switch functionName {
 		case "avg":
-			duration, err := time.ParseDuration(parts[2])
+			duration, err := time.ParseDuration(functionParts[1])
 			if err != nil {
-				return SeriesRequest{}, errors.Wrap(err, "parse duration")
+				return "", nil, errors.Wrap(err, "parse duration")
 			}
-			return SeriesRequest{
-				SeriesName: parts[0],
-				Function:   parts[1],
-				Duration:   duration,
-			}, nil
+			return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
 		default:
-			return SeriesRequest{}, errors.New("unknown function")
+			return "", nil, errors.New("unknown function name")
 		}
 	default:
-		return SeriesRequest{}, errors.New("invalid series request")
+		return "", nil, errors.New("only one function supported for now")
 	}
 }

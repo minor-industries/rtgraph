@@ -3,7 +3,6 @@ package computed_series
 import (
 	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
-	"github.com/pkg/errors"
 )
 
 type Fcn interface {
@@ -50,13 +49,4 @@ func (f *FcnAvg) Compute(_ *deque.Deque[schema.Value]) (float64, bool) {
 	}
 
 	return f.sum / float64(f.count), true
-}
-
-func GetFcn(name string) (Fcn, error) {
-	switch name {
-	case "avg":
-		return &FcnAvg{}, nil
-	default:
-		return nil, errors.New("unknown Fcn")
-	}
 }

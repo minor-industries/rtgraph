@@ -23,15 +23,6 @@ func NewSubscription(
 	req *Request,
 	start time.Time,
 ) (*Subscription, error) {
-	var reqs []computed_series.SeriesRequest
-	for _, sn := range req.Series {
-		req, err := computed_series.Parse(sn)
-		if err != nil {
-			return nil, errors.Wrap(err, "parse series")
-		}
-		reqs = append(reqs, req)
-	}
-
 	sub := &Subscription{
 		lastSeen:    map[int]time.Time{},
 		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
@@ -39,21 +30,13 @@ func NewSubscription(
 		inputSeries: make([]string, len(req.Series)),
 	}
 
-	for idx, r := range reqs {
-		sub.inputSeries[idx] = r.SeriesName
-		if r.Function == "" { // TODO: this is a hack
-			sub.operators[idx] = computed_series.Identity{}
-		} else {
-			fcn, err := computed_series.GetFcn(r.Function)
-			if err != nil {
-				return nil, errors.Wrap(err, "get fcn")
-			}
-			sub.operators[idx] = computed_series.NewComputedSeries(
-				fcn,
-				r.Duration,
-				start,
-			)
+	for idx, sn := range req.Series {
+		inputSeriesName, op, err := computed_series.Parse(sn, start)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse series")
 		}
+		sub.inputSeries[idx] = inputSeriesName
+		sub.operators[idx] = op
 	}
 
 	return sub, nil
