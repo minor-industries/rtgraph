@@ -10,15 +10,15 @@ func floatP(v float32) *float32 {
 }
 
 func interleave(
-	allSeries []schema.Series,
+	allSeries [][]schema.Value,
 	f func(index int, value schema.Value) error,
 ) error {
 	// TODO: interleave could use some tests!
 	indices := make([]int, len(allSeries))
 
 	remaining := 0
-	for _, s := range allSeries {
-		remaining += len(s.Values)
+	for _, values := range allSeries {
+		remaining += len(values)
 	}
 
 	for ; remaining > 0; remaining-- {
@@ -27,12 +27,12 @@ func interleave(
 		var minIdx int
 
 		// this will be inefficient for a large number of series
-		for i, s := range allSeries {
+		for i, values := range allSeries {
 			j := indices[i]
-			if j == len(s.Values) {
+			if j == len(values) {
 				continue
 			}
-			v := s.Values[j]
+			v := values[j]
 			if found == 0 || v.Timestamp.Before(minT) {
 				minT = v.Timestamp
 				minIdx = i
@@ -42,7 +42,7 @@ func interleave(
 
 		minSeries := allSeries[minIdx]
 		j := indices[minIdx]
-		if err := f(minIdx, minSeries.Values[j]); err != nil {
+		if err := f(minIdx, minSeries[j]); err != nil {
 			return err
 		}
 		indices[minIdx]++

@@ -1,7 +1,6 @@
 package subscription
 
 import (
-	"fmt"
 	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/internal/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
@@ -42,7 +41,7 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 		positions: map[string]int{},
 	}
 
-	for _, r := range reqs {
+	for idx, r := range reqs {
 		var fcn computed_series.Fcn
 		var err error
 
@@ -57,6 +56,7 @@ func NewSubscription(req *SubscriptionRequest) (*Subscription, error) {
 			r.SeriesName,
 			fcn,
 			r.Duration,
+			idx+1,
 		)
 		sub.allComputed = append(sub.allComputed, cs)
 	}
@@ -82,17 +82,23 @@ func (sub *Subscription) getInitialData(
 		}
 	}
 
-	allSeries := make([]schema.Series, len(sub.allComputed))
+	allSeries := make([][]schema.Value, len(sub.allComputed))
 	for idx, cs := range sub.allComputed {
 		var err error
 		// TODO: we should have better dispatch here, e.g., through an interface
+		// or perhaps this just all goes through the same code path with an identity transformer
 		if cs.FunctionName() == "" {
-			allSeries[idx], err = db.LoadDataWindow(cs.InputSeriesName, start)
+			var series schema.Series
+			series, err = db.LoadDataWindow(cs.InputSeriesName, start)
+			if err != nil {
+				return nil, errors.Wrap(err, "load data window")
+			}
+			allSeries[idx] = series.Values
 		} else {
 			allSeries[idx], err = cs.LoadInitial(db, start)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err, "load data window")
+			if err != nil {
+				return nil, errors.Wrap(err, "load initial")
+			}
 		}
 	}
 
@@ -156,15 +162,10 @@ func (sub *Subscription) inputMap() map[string][]*computed_series.ComputedSeries
 	return result
 }
 
-func (sub *Subscription) packRows(s schema.Series) (*messages.Data, error) {
-	pos, ok := sub.positions[s.SeriesName]
-	if !ok {
-		return nil, fmt.Errorf("found value with unknown series: %s", s.SeriesName)
-	}
-
+func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Data, error) {
 	data := &messages.Data{Rows: []interface{}{}}
 
-	for _, v := range s.Values {
+	for _, v := range values {
 		// TODO: don't love how data is passed in here, can we return the row (or do something else)?
 		err := sub.packRow(data, pos, v.Timestamp, v.Value)
 		if err != nil {
@@ -198,26 +199,10 @@ func (sub *Subscription) Run(
 	}
 	msgCh <- initialData
 
-	seriesCh := make(chan schema.Series) // TODO: need to close all these channels, etc
-
-	go sub.produceAllSeries(broker, seriesCh)
-
-	for series := range seriesCh {
-		data, err := sub.packRows(series)
-		if err != nil {
-			msgCh <- &messages.Data{
-				Error: errors.Wrap(err, "pack rows").Error(),
-			}
-			return
-		}
-		msgCh <- data
-	}
+	sub.produceAllSeries(broker, msgCh)
 }
 
-func (sub *Subscription) produceAllSeries(
-	broker *broker.Broker,
-	output chan schema.Series,
-) {
+func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *messages.Data) {
 	msgCh := broker.Subscribe()
 	defer broker.Unsubscribe(msgCh)
 
@@ -232,11 +217,21 @@ func (sub *Subscription) produceAllSeries(
 		if css, ok := computedMap[msg.SeriesName]; ok {
 			for _, cs := range css {
 				// TODO: need better dispatch here
+				var output []schema.Value
 				if cs.FunctionName() == "" {
-					output <- msg
+					output = msg.Values
 				} else {
-					output <- cs.ProcessNewValues(msg.Values)
+					output = cs.ProcessNewValues(msg.Values)
 				}
+
+				data, err := sub.packRows(output, cs.Position())
+				if err != nil {
+					outMsg <- &messages.Data{
+						Error: errors.Wrap(err, "pack rows").Error(),
+					}
+					return
+				}
+				outMsg <- data
 			}
 		}
 	}

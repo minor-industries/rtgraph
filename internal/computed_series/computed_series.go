@@ -14,14 +14,16 @@ type ComputedSeries struct {
 	InputSeriesName string // TODO: make private?
 	fcn             Fcn
 	duration        time.Duration
+	position        int
 }
 
-func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration) *ComputedSeries {
+func NewComputedSeries(inputSeriesName string, fcn Fcn, duration time.Duration, position int) *ComputedSeries {
 	cs := &ComputedSeries{
 		values:          deque.New[schema.Value](0, 64),
 		InputSeriesName: inputSeriesName,
 		duration:        duration,
 		fcn:             fcn,
+		position:        position,
 	}
 
 	return cs
@@ -39,6 +41,10 @@ func (cs *ComputedSeries) OutputSeriesName() string {
 		return cs.InputSeriesName
 	}
 	return fmt.Sprintf("%s_%s_%s", cs.InputSeriesName, cs.fcn.Name(), cs.duration.String())
+}
+
+func (cs *ComputedSeries) Position() int {
+	return cs.position
 }
 
 func (cs *ComputedSeries) removeOld(now time.Time) {
@@ -63,7 +69,7 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 func (cs *ComputedSeries) LoadInitial(
 	db storage.StorageBackend,
 	start time.Time,
-) (schema.Series, error) {
+) ([]schema.Value, error) {
 	// TODO: LoadInitial could use some tests
 	lookBack := -cs.duration
 	window, err := db.LoadDataWindow(
@@ -71,7 +77,7 @@ func (cs *ComputedSeries) LoadInitial(
 		start.Add(lookBack),
 	)
 	if err != nil {
-		return schema.Series{}, errors.Wrap(err, "load original window")
+		return nil, errors.Wrap(err, "load original window")
 	}
 
 	fmt.Printf("loaded %d rows for %s (%s)\n", len(window.Values), cs.OutputSeriesName(), cs.InputSeriesName)
@@ -82,7 +88,7 @@ func (cs *ComputedSeries) LoadInitial(
 func (cs *ComputedSeries) processNewValues(
 	values []schema.Value,
 	start time.Time, // only produce values after start time
-) schema.Series {
+) []schema.Value {
 	result := make([]schema.Value, 0, len(values))
 
 	for _, v := range values {
@@ -105,12 +111,9 @@ func (cs *ComputedSeries) processNewValues(
 		})
 	}
 
-	return schema.Series{
-		SeriesName: cs.OutputSeriesName(),
-		Values:     result,
-	}
+	return result
 }
 
-func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) schema.Series {
+func (cs *ComputedSeries) ProcessNewValues(values []schema.Value) []schema.Value {
 	return cs.processNewValues(values, time.Time{})
 }
