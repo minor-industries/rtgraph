@@ -13,10 +13,6 @@ function supplant(s, o) {
 
 class Graph {
     constructor(elem, opts) {
-        const second = 1000;
-        const minute = second * 60;
-        const hour = second * 24;
-
         this.elem = elem;
         this.opts = opts;
 
@@ -26,7 +22,7 @@ class Graph {
 
         this.opts.mappers = this.opts.mappers || [];
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
-        this.windowSize = this.opts.windowSize || 10 * minute; // milliseconds
+        this.windowSize = this.opts.windowSize || 10 * 60 * 1000; // 10 minutes in ms
 
         this.g = undefined;
         this.data = [];
@@ -174,7 +170,7 @@ class Graph {
                         series: this.opts.seriesNames,
                         windowSize: this.opts.windowSize,
                         lastPointMs: lastPointMs,
-                        maxGapMs: this.opts.maxGapMs || minute
+                        maxGapMs: this.opts.maxGapMs || 60 * 1000 // 60 seconds in ms
                     }
                 ));
             })
