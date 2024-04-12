@@ -15,12 +15,13 @@ func (g *Graph) publishPrometheusMetrics() {
 
 	for message := range msgCh {
 		switch m := message.(type) {
-		case *schema.Series:
-			if _, ok := metricMap[m.SeriesName]; !ok {
+		case schema.Series:
+			fullName := "rtgraph_" + m.SeriesName
+			if _, ok := metricMap[fullName]; !ok {
 				tg := metrics.NewTimeoutGauge(15*time.Second, prometheus.GaugeOpts{
-					Name: m.SeriesName,
+					Name: fullName,
 				})
-				metricMap[m.SeriesName] = tg
+				metricMap[fullName] = tg
 				err := prometheus.Register(tg.G)
 				if err != nil {
 					g.errCh <- errors.Wrap(err, "register prometheus metric")
@@ -32,8 +33,7 @@ func (g *Graph) publishPrometheusMetrics() {
 			}
 
 			lastPoint := m.Values[len(m.Values)-1]
-
-			metricMap[m.SeriesName].Set(lastPoint.Value)
+			metricMap[fullName].Set(lastPoint.Value)
 		}
 	}
 }
