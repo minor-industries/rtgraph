@@ -124,7 +124,6 @@ class Graph {
     }
 
     connect() {
-        console.log("connecting:", this.opts.seriesNames);
         const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
@@ -153,7 +152,6 @@ class Graph {
         ws.onopen = event => {
             setTimeout(() => {
                 let lastPointMs = this.getLastPoint();
-                console.log("lastPointMs: " + lastPointMs);
                 ws.send(JSON.stringify({
                         series: this.opts.seriesNames,
                         windowSize: this.opts.windowSize,
@@ -165,12 +163,10 @@ class Graph {
         }
 
         ws.onerror = err => {
-            console.log("websocket error: " + err);
             ws.close();
         }
 
         ws.onclose = err => {
-            console.log("websocket close: " + err);
             this.elem.classList.add("disconnected");
             this.reconnect();
         }
