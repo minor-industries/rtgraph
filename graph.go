@@ -23,9 +23,14 @@ type Graph struct {
 	db       storage.StorageBackend
 }
 
+type Opts struct {
+	DisablePrometheusMetrics bool
+}
+
 func New(
 	backend storage.StorageBackend,
 	errCh chan error,
+	opts Opts,
 	seriesNames []string,
 ) (*Graph, error) {
 	err := backend.CreateSeries(seriesNames)
@@ -52,7 +57,9 @@ func New(
 		return nil, errors.Wrap(err, "setup server")
 	}
 
-	go g.publishPrometheusMetrics()
+	if !opts.DisablePrometheusMetrics {
+		go g.publishPrometheusMetrics()
+	}
 	go g.dbWriter.Run()
 	go g.publishToDB()
 	go br.Start()
