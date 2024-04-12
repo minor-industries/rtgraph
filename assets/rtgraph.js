@@ -20,7 +20,6 @@ class Graph {
             throw new Error("labels not given");
         }
 
-        this.opts.mappers = this.opts.mappers || [];
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize || 10 * 60 * 1000; // 10 minutes in ms
 
@@ -48,17 +47,6 @@ class Graph {
         const newGraph = this.data.length === 0;
 
         let newRows = rows.map(mapDate);
-
-        this.opts.mappers.forEach(mapper => {
-            newRows = newRows.map(([first, ...rest]) => {
-                return [first, ...rest.map(x => {
-                    if (x === null || isNaN(x)) {
-                        return x;
-                    }
-                    return mapper(x);
-                })]
-            })
-        })
 
         this.data.push(...newRows);
 

@@ -50,7 +50,7 @@ func parseFunction(
 ) (string, Operator, error) {
 	functionParts := trimSpace(strings.Fields(def))
 
-	if len(functionParts) != 2 {
+	if len(functionParts) == 0 {
 		return "", nil, errors.New("invalid number of function parameters")
 	}
 
@@ -68,6 +68,8 @@ func parseFunction(
 			return "", nil, errors.Wrap(err, "invalid float")
 		}
 		return series, OpGt{X: x}, nil
+	case "CtoF":
+		return series, OpCtoF{}, nil
 	default:
 		return "", nil, errors.New("unknown function name")
 	}
