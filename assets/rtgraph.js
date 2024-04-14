@@ -11,6 +11,12 @@ function supplant(s, o) {
     );
 }
 
+const isTouchDevice = () => {
+    return (('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        (navigator.msMaxTouchPoints > 0));
+};
+
 class Graph {
     constructor(elem, opts) {
         this.elem = elem;
@@ -18,6 +24,12 @@ class Graph {
 
         if (this.opts.labels === undefined || this.opts.labels === null) {
             throw new Error("labels not given");
+        }
+
+        if (this.opts.interactionModel === undefined) {
+            if (isTouchDevice()) {
+                this.opts.interactionModel = {};
+            }
         }
 
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
@@ -68,6 +80,7 @@ class Graph {
                     connectSeparatedPoints: true,
                     valueRange: this.opts.valueRange,
                     series: this.opts.series,
+                    interactionModel: this.opts.interactionModel,
                 });
         } else {
             let updateOpts = {
