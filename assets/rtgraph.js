@@ -26,12 +26,6 @@ class Graph {
             throw new Error("labels not given");
         }
 
-        if (this.opts.interactionModel === undefined) {
-            if (isTouchDevice()) {
-                this.opts.interactionModel = {};
-            }
-        }
-
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize || 10 * 60 * 1000; // 10 minutes in ms
 
@@ -41,6 +35,10 @@ class Graph {
         this.t0Client = undefined;
 
         this.connect();
+    }
+
+    disableInteraction() {
+        return isTouchDevice();
     }
 
     computeDateWindow() {
@@ -64,24 +62,26 @@ class Graph {
 
         if (newGraph) {
             let labels = this.computeLabels();
-            this.g = new Dygraph(
-                this.elem,
-                this.data,
-                {
-                    // dateWindow: [t0, t1],
-                    title: supplant(this.opts.title, {value: ""}), // TODO: do better here
-                    ylabel: this.opts.ylabel,
-                    labels: labels,
-                    includeZero: this.opts.includeZero,
-                    strokeWidth: this.opts.strokeWidth,
-                    dateWindow: this.computeDateWindow(),
-                    height: this.opts.height,
-                    rightGap: 5,
-                    connectSeparatedPoints: true,
-                    valueRange: this.opts.valueRange,
-                    series: this.opts.series,
-                    interactionModel: this.opts.interactionModel,
-                });
+            let opts = {
+                // dateWindow: [t0, t1],
+                title: supplant(this.opts.title, {value: ""}), // TODO: do better here
+                ylabel: this.opts.ylabel,
+                labels: labels,
+                includeZero: this.opts.includeZero,
+                strokeWidth: this.opts.strokeWidth,
+                dateWindow: this.computeDateWindow(),
+                height: this.opts.height,
+                rightGap: 5,
+                connectSeparatedPoints: true,
+                valueRange: this.opts.valueRange,
+                series: this.opts.series,
+            };
+
+            if (this.disableInteraction()) {
+                opts.interactionModel = {};
+            }
+
+            this.g = new Dygraph(this.elem, this.data, opts);
         } else {
             let updateOpts = {
                 file: this.data,
