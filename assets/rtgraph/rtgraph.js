@@ -142,7 +142,7 @@ class Graph {
         ws.binaryType = "arraybuffer";
 
         ws.onmessage = message => {
-            this.elem.classList.remove("disconnected");
+            this.elem.classList.remove("rtgraph-disconnected");
             if (message.data instanceof ArrayBuffer) {
                 const msg = msgpack.decode(new Uint8Array(message.data));
 
@@ -180,7 +180,7 @@ class Graph {
         }
 
         ws.onclose = err => {
-            this.elem.classList.add("disconnected");
+            this.elem.classList.add("rtgraph-disconnected");
             this.reconnect();
         }
     }
