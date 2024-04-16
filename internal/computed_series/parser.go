@@ -61,13 +61,26 @@ func parseFunction(
 		if err != nil {
 			return "", nil, errors.Wrap(err, "parse duration")
 		}
-		return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
+		switch len(functionParts) {
+		case 2:
+			return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
+		case 3:
+			return series, NewComputedSeries(&FcnAvgWindow{}, duration, start), nil
+		default:
+			return "", nil, errors.New("avg: invalid number of function parameters")
+		}
 	case "gt":
 		x, err := strconv.ParseFloat(functionParts[1], 64)
 		if err != nil {
 			return "", nil, errors.Wrap(err, "invalid float")
 		}
 		return series, OpGt{X: x}, nil
+	case "add":
+		x, err := strconv.ParseFloat(functionParts[1], 64)
+		if err != nil {
+			return "", nil, errors.Wrap(err, "invalid float")
+		}
+		return series, OpAdd{X: x}, nil
 	case "CtoF":
 		return series, OpCtoF{}, nil
 	default:
