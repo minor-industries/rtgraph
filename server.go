@@ -37,8 +37,13 @@ func (g *Graph) setupServer() error {
 		"rtgraph/rtgraph.css", "text/css",
 
 		"rtgraph/purecss/base-min.css", "text/css",
+		"rtgraph/purecss/grids-min.css", "text/css",
 		"rtgraph/purecss/grids-responsive-min.css", "text/css",
 		"rtgraph/purecss/pure-min.css", "text/css",
+
+		"rtgraph/purecss/base.css", "text/css",
+		"rtgraph/purecss/grids.css", "text/css",
+		"rtgraph/purecss/grids-responsive.css", "text/css",
 	)
 
 	r.GET("/ws", func(c *gin.Context) {
