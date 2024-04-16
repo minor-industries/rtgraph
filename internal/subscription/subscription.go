@@ -45,6 +45,7 @@ func NewSubscription(
 func (sub *Subscription) getInitialData(
 	db storage.StorageBackend,
 	start time.Time,
+	now time.Time,
 ) (*messages.Data, error) {
 
 	allSeries := make([][]schema.Value, len(sub.operators))
@@ -62,7 +63,7 @@ func (sub *Subscription) getInitialData(
 			return nil, errors.Wrap(err, "load original window")
 		}
 
-		allSeries[idx] = op.ProcessNewValues(window.Values)
+		allSeries[idx] = op.ProcessNewValues(window.Values, now)
 	}
 
 	rows := &messages.Data{Rows: []any{}}
@@ -150,7 +151,7 @@ func (sub *Subscription) Run(
 		Now: uint64(now.UnixMilli()),
 	}
 
-	initialData, err := sub.getInitialData(db, start)
+	initialData, err := sub.getInitialData(db, start, now)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
@@ -159,10 +160,14 @@ func (sub *Subscription) Run(
 	}
 	msgCh <- initialData
 
-	sub.produceAllSeries(broker, msgCh)
+	sub.produceAllSeries(broker, msgCh, now)
 }
 
-func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *messages.Data) {
+func (sub *Subscription) produceAllSeries(
+	broker *broker.Broker,
+	outMsg chan *messages.Data,
+	now time.Time,
+) {
 	msgCh := broker.Subscribe()
 	defer broker.Unsubscribe(msgCh)
 
@@ -178,7 +183,7 @@ func (sub *Subscription) produceAllSeries(broker *broker.Broker, outMsg chan *me
 			for _, idx := range out {
 				op := sub.operators[idx]
 				// TODO: need better dispatch here
-				output := op.ProcessNewValues(msg.Values)
+				output := op.ProcessNewValues(msg.Values, now)
 
 				data, err := sub.packRows(output, idx+1)
 				if err != nil {

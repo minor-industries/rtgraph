@@ -3,6 +3,7 @@ package computed_series
 import (
 	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
+	"time"
 )
 
 type FcnAvg struct {
@@ -20,7 +21,7 @@ func (f *FcnAvg) RemoveValue(v schema.Value) {
 	f.sum -= v.Value
 }
 
-func (f *FcnAvg) Compute(_ *deque.Deque[schema.Value]) (float64, bool) {
+func (f *FcnAvg) Compute(_ *deque.Deque[schema.Value], now time.Time) (float64, bool) {
 	if f.count <= 0 {
 		return 0, false
 	}

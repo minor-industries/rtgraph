@@ -65,7 +65,14 @@ func parseFunction(
 		case 2:
 			return series, NewComputedSeries(&FcnAvg{}, duration, start), nil
 		case 3:
-			return series, NewComputedSeries(&FcnAvgWindow{}, duration, start), nil
+			switch functionParts[2] {
+			case "triangle":
+				return series, NewComputedSeries(&FcnAvgWindow{
+					duration: duration,
+					scale:    1.0 / float64(duration),
+				}, duration, start), nil
+			}
+			return "", nil, errors.New("unknown window")
 		default:
 			return "", nil, errors.New("avg: invalid number of function parameters")
 		}
