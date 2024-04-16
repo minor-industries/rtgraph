@@ -2,5 +2,5 @@ package assets
 
 import "embed"
 
-//go:embed *.js *.css
+//go:embed rtgraph/*.js rtgraph/*.css
 var FS embed.FS

@@ -27,13 +27,14 @@ func (g *Graph) setupServer() error {
 	})
 
 	g.StaticFiles(assets.FS,
-		"dygraph.css", "text/css",
-		"rtgraph.css", "text/css",
+		"rtgraph/dygraph.min.js", "application/javascript",
+		"rtgraph/dygraph.min.js.map", "application/javascript",
+		"rtgraph/dygraph.css", "text/css",
 
-		"dygraph.min.js", "application/javascript",
-		"msgpack.min.js", "application/javascript",
+		"rtgraph/msgpack.min.js", "application/javascript",
 
-		"rtgraph.js", "application/javascript",
+		"rtgraph/rtgraph.js", "application/javascript",
+		"rtgraph/rtgraph.css", "text/css",
 	)
 
 	r.GET("/ws", func(c *gin.Context) {
@@ -100,7 +101,8 @@ func (g *Graph) StaticFiles(fsys fs.FS, files ...string) {
 	for i := 0; i < len(files); i += 2 {
 		name := files[i]
 		ct := files[i+1]
-		g.server.GET("/"+name, func(c *gin.Context) {
+		path := "/" + name
+		g.server.GET(path, func(c *gin.Context) {
 			header := c.Writer.Header()
 			header["Content-Type"] = []string{ct}
 			content, err := fs.ReadFile(fsys, name)
