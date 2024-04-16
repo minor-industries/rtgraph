@@ -29,6 +29,15 @@
         .blue {
             background-color: lightblue;
         }
+
+        .green {
+            background-color: lightgreen;
+        }
+
+        .graph {
+            border: 2px solid gray;
+            margin: 10px;
+        }
     </style>
 
     <script type="text/javascript">
@@ -41,6 +50,7 @@
                     "sample1 | gt 0.2 | avg 30s",
                     "sample2 | gt -0.5"
                 ],
+                ylabel: "random value",
                 title: "Sample Series: {value}",
                 height: 300,
                 windowSize: minute,
@@ -57,18 +67,21 @@
 </head>
 <body>
 
-<div class="pure-g" style="padding: 20px;">
+<div class="pure-g">
     <div class="pure-u-1">
-        <div id="graphdiv0"></div>
+        <div id="graphdiv0" class="graph"></div>
     </div>
 </div>
 
 <div class="pure-g">
-    <div class="pure-u-1 pure-u-sm-1-2">
+    <div class="pure-u-1 pure-u-sm-1-2 pure-u-md-1-3">
         <div class="content red">one</div>
     </div>
-    <div class="pure-u-1 pure-u-sm-1-2">
+    <div class="pure-u-1 pure-u-sm-1-2 pure-u-md-1-3">
         <div class="content blue">two</div>
+    </div>
+    <div class="pure-u-1 pure-u-sm-1-2 pure-u-md-1-3">
+        <div class="content green">three</div>
     </div>
 </div>
 
