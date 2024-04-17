@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
-	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/internal/subscription"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
@@ -17,10 +16,9 @@ type Graph struct {
 	seriesNames []string
 	errCh       chan error
 
-	broker   *broker.Broker
-	server   *gin.Engine
-	dbWriter *database.DBWriter
-	db       storage.StorageBackend
+	broker *broker.Broker
+	server *gin.Engine
+	db     storage.StorageBackend
 }
 
 type Opts struct {
@@ -46,11 +44,10 @@ func New(
 	server.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogging...))
 
 	g := &Graph{
-		broker:   br,
-		db:       backend,
-		errCh:    errCh,
-		server:   server,
-		dbWriter: database.NewDBWriter(backend, errCh, 100),
+		broker: br,
+		db:     backend,
+		errCh:  errCh,
+		server: server,
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -60,16 +57,11 @@ func New(
 	if !opts.DisablePrometheusMetrics {
 		go g.publishPrometheusMetrics()
 	}
-	go g.dbWriter.Run()
 	go g.publishToDB()
 	go br.Start()
 	//go g.monitorDrops()
 
 	return g, nil
-}
-
-func (g *Graph) DBWriter() *database.DBWriter {
-	return g.dbWriter
 }
 
 func (g *Graph) GetEngine() *gin.Engine {
@@ -89,7 +81,6 @@ func (g *Graph) CreateValue(
 			Timestamp: timestamp,
 			Value:     value,
 		}},
-		Persisted: true,
 	})
 
 	return nil

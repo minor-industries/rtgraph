@@ -27,13 +27,13 @@ func run() error {
 		}
 	}
 
-	db, err := database.Get(dbPath)
+	db, err := database.Get(dbPath, errCh)
 	if err != nil {
 		return errors.Wrap(err, "get database")
 	}
 
 	graph, err := rtgraph.New(
-		&database.Backend{DB: db},
+		db,
 		errCh,
 		rtgraph.Opts{},
 		[]string{

@@ -1,52 +1,47 @@
 package database
 
 import (
-	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 	"time"
 )
 
-type DBWriter struct {
-	errCh   chan error
-	objects chan any
-	db      storage.StorageBackend
+func (b *Backend) Insert(obj any) {
+	b.objects <- obj
 }
 
-func NewDBWriter(
-	db storage.StorageBackend,
-	errCh chan error,
-	bufSize int,
-) *DBWriter {
-	return &DBWriter{
-		db:      db,
-		errCh:   errCh,
-		objects: make(chan any, bufSize),
-	}
+func (b *Backend) insert(objects []any) error {
+	err := b.db.Transaction(func(tx *gorm.DB) error {
+		for _, row := range objects {
+			res := tx.Create(row)
+			if res.Error != nil {
+				return errors.Wrap(res.Error, "create")
+			}
+		}
+		return nil
+	})
+	return err
 }
 
-func (w *DBWriter) Insert(obj any) {
-	w.objects <- obj
-}
-
-func (w *DBWriter) Run() {
+func (b *Backend) RunWriter() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 
 	var rows []any
 
 	for {
 		select {
-		case obj := <-w.objects:
+		case obj := <-b.objects:
 			rows = append(rows, obj)
 		case <-ticker.C:
 			if len(rows) == 0 {
 				continue
 			}
 
-			err := w.db.Insert(rows)
+			err := b.insert(rows)
 			rows = nil
 
 			if err != nil {
-				w.errCh <- errors.Wrap(err, "transaction")
+				b.errCh <- errors.Wrap(err, "transaction")
 				return
 			}
 		}

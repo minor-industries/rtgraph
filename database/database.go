@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func Get(filename string) (*gorm.DB, error) {
+func Get(filename string, errCh chan error) (*Backend, error) {
 	db, err := gorm.Open(sqlite.Open(filename), &gorm.Config{})
 	if err != nil {
 		return nil, errors.Wrap(err, "open")
@@ -26,7 +26,8 @@ func Get(filename string) (*gorm.DB, error) {
 			return nil, errors.Wrap(err, "migrate measurement")
 		}
 	}
-	return db, nil
+
+	return NewBackend(db, errCh, 100), nil
 }
 
 func RandomID() []byte {
@@ -65,7 +66,40 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 }
 
 type Backend struct {
-	*gorm.DB
+	db *gorm.DB
+
+	objects chan any
+	errCh   chan error
+}
+
+func (b *Backend) GetORM() *gorm.DB {
+	return b.db
+}
+
+func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
+	b.Insert(&Value{
+		ID:        RandomID(),
+		Timestamp: timestamp,
+		Value:     value,
+		SeriesID:  hashedID(seriesName),
+	})
+	return nil
+}
+
+func NewBackend(
+	db *gorm.DB,
+	errCh chan error,
+	bufSize int,
+) *Backend {
+	b := &Backend{
+		db:      db,
+		objects: make(chan any, bufSize),
+		errCh:   errCh,
+	}
+
+	go b.RunWriter()
+
+	return b
 }
 
 func (b *Backend) LoadDataWindow(
@@ -74,7 +108,7 @@ func (b *Backend) LoadDataWindow(
 ) (schema.Series, error) {
 	var rows []Value
 
-	tx := b.DB.Preload("Series").Where(
+	tx := b.db.Preload("Series").Where(
 		"series_id = ? and timestamp >= ?",
 		hashedID(seriesName),
 		start,
@@ -101,7 +135,7 @@ func (b *Backend) LoadDataWindow(
 func (b *Backend) CreateSeries(
 	seriesNames []string,
 ) error {
-	seriesMap, err := loadSeries(b.DB)
+	seriesMap, err := loadSeries(b.db)
 	if err != nil {
 		return errors.Wrap(err, "initial load")
 	}
@@ -110,7 +144,7 @@ func (b *Backend) CreateSeries(
 		if _, found := seriesMap[name]; found {
 			continue
 		}
-		b.DB.Create(&Series{
+		b.db.Create(&Series{
 			ID:   hashedID(name),
 			Name: name,
 			Unit: "",
@@ -118,17 +152,4 @@ func (b *Backend) CreateSeries(
 	}
 
 	return nil
-}
-
-func (b *Backend) Insert(objects []any) error {
-	err := b.DB.Transaction(func(tx *gorm.DB) error {
-		for _, row := range objects {
-			res := tx.Create(row)
-			if res.Error != nil {
-				return errors.Wrap(res.Error, "create")
-			}
-		}
-		return nil
-	})
-	return err
 }

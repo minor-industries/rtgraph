@@ -2,8 +2,8 @@ package rtgraph
 
 import (
 	"crypto/sha256"
-	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/schema"
+	"github.com/pkg/errors"
 )
 
 // TODO: we're leaking a database abstraction here
@@ -23,17 +23,13 @@ func (g *Graph) publishToDB() {
 	for msg := range msgCh {
 		switch m := msg.(type) {
 		case schema.Series:
-			if !m.Persisted {
-				continue
-			}
 			// TODO: figure out how to pass a slice to Insert()
 			for _, value := range m.Values {
-				g.dbWriter.Insert(&database.Value{
-					ID:        database.RandomID(),
-					Timestamp: value.Timestamp,
-					Value:     value.Value,
-					SeriesID:  hashedID(m.SeriesName), // TODO: this seems bad. Perhaps provide a constructor that does this for us and don't allow using the struct form
-				})
+				err := g.db.InsertValue(m.SeriesName, value.Timestamp, value.Value)
+				if err != nil {
+					g.errCh <- errors.Wrap(err, "insert value to db")
+					return
+				}
 			}
 		}
 	}

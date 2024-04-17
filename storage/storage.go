@@ -15,5 +15,9 @@ type StorageBackend interface {
 		seriesNames []string,
 	) error
 
-	Insert(objects []any) error
+	InsertValue(
+		seriesName string,
+		timestamp time.Time,
+		value float64,
+	) error
 }
