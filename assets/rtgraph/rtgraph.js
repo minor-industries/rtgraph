@@ -59,6 +59,9 @@ class Graph {
         let newRows = rows.map(mapDate);
 
         this.data.push(...newRows);
+        this.data.sort((a, b) => {
+            return a[0] - b[0];
+        })
 
         if (newGraph) {
             let labels = this.computeLabels();
@@ -69,7 +72,7 @@ class Graph {
                 labels: labels,
                 includeZero: this.opts.includeZero,
                 strokeWidth: this.opts.strokeWidth,
-                dateWindow: this.computeDateWindow(),
+                // dateWindow: this.computeDateWindow(),
                 height: this.opts.height,
                 rightGap: 5,
                 connectSeparatedPoints: true,
@@ -89,8 +92,8 @@ class Graph {
             };
 
             // update the title if needed
-            if (this.data.length > 0) {
-                let lastRow = this.data[this.data.length - 1];
+            if (newRows.length > 0) {
+                let lastRow = newRows[newRows.length - 1];
                 const lastValue = lastRow[1]; // for now use the first Y value
                 if (lastValue !== null && lastValue !== undefined) {
                     updateOpts.title = supplant(this.opts.title, {value: lastValue.toFixed(2)});
@@ -122,7 +125,7 @@ class Graph {
                 return;
             }
             this.g.updateOptions({
-                dateWindow: this.computeDateWindow(),
+                // dateWindow: this.computeDateWindow(),
             })
         }, 250);
     }
