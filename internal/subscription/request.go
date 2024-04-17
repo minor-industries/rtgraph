@@ -10,8 +10,13 @@ type Request struct {
 }
 
 func (req *Request) Start(now time.Time) time.Time {
-	windowSize := time.Duration(req.WindowSize) * time.Millisecond
-	windowStart := now.Add(-windowSize)
+	var windowStart time.Time
+	if req.WindowSize > 0 {
+		windowSize := time.Duration(req.WindowSize) * time.Millisecond
+		windowStart = now.Add(-windowSize)
+	} else {
+		windowStart = time.UnixMilli(0) // get "all" points if windowSize unset
+	}
 
 	if req.LastPointMs != 0 {
 		tStartAfter := time.UnixMilli(int64(req.LastPointMs + 1))

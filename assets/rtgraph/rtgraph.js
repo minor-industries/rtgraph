@@ -27,7 +27,7 @@ class Graph {
         }
 
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
-        this.windowSize = this.opts.windowSize || 10 * 60 * 1000; // 10 minutes in ms
+        this.windowSize = this.opts.windowSize;
 
         this.g = undefined;
         this.data = [];
@@ -42,6 +42,9 @@ class Graph {
     }
 
     computeDateWindow() {
+        if (this.windowSize === undefined || this.windowSize === null) {
+            return undefined;
+        }
         const t1Client = new Date();
         const dt = t1Client.getTime() - this.t0Client.getTime()
         const t1 = new Date(this.t0Server.getTime() + dt);
@@ -59,6 +62,13 @@ class Graph {
         let newRows = rows.map(mapDate);
 
         this.data.push(...newRows);
+
+        if (this.opts.reorderData === true) {
+            // TODO: can probably do better here with binary search and array splice
+            this.data.sort((a, b) => {
+                return a[0] - b[0];
+            })
+        }
 
         if (newGraph) {
             let labels = this.computeLabels();
@@ -89,8 +99,8 @@ class Graph {
             };
 
             // update the title if needed
-            if (this.data.length > 0) {
-                let lastRow = this.data[this.data.length - 1];
+            if (newRows.length > 0) {
+                let lastRow = newRows[newRows.length - 1];
                 const lastValue = lastRow[1]; // for now use the first Y value
                 if (lastValue !== null && lastValue !== undefined) {
                     updateOpts.title = supplant(this.opts.title, {value: lastValue.toFixed(2)});
@@ -167,7 +177,7 @@ class Graph {
                 let lastPointMs = this.getLastPoint();
                 ws.send(JSON.stringify({
                         series: this.opts.seriesNames,
-                        windowSize: this.opts.windowSize,
+                        windowSize: this.windowSize || 0,
                         lastPointMs: lastPointMs,
                         maxGapMs: this.opts.maxGapMs || 60 * 1000 // 60 seconds in ms
                     }
