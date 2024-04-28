@@ -271,46 +271,50 @@ function mergeArrays(arr1: row[], arr2: row[]): row[] {
     let i = 0, j = 0;
 
     while (i < arr1.length && j < arr2.length) {
-        const time1 = arr1[i][0].getTime();
-        const time2 = arr2[j][0].getTime();
+        const time1 = arr1[i][0];
+        const time2 = arr2[j][0];
 
         if (time1 < time2) {
             result.push(arr1[i++]);
         } else if (time1 > time2) {
-            // Handle multiple entries with the same timestamp in arr2 before a new timestamp in arr1
-            let tempRow = arr2[j++];
-            while (j < arr2.length && arr2[j][0].getTime() === time2) {
-                tempRow = mergeRows(tempRow, arr2[j++]);
-            }
-            result.push(tempRow);
+            result.push(arr2[j++]);
         } else {
-            // If timestamps match, merge all matching arr2 rows into arr1 row before incrementing i
-            let mergedRow = arr1[i];
-            do {
-                mergedRow = mergeRows(mergedRow, arr2[j++]);
-            } while (j < arr2.length && arr2[j][0].getTime() === time1);
-            result.push(mergedRow);
-            i++;
+            // Merge all rows at the same timestamp from both arrays
+            let mergedRows = mergeAllAtSameTimestamp(arr1, arr2, time1, i, j);
+            result.push(mergedRows);
+            // Skip over all rows at this timestamp
+            while (i < arr1.length && arr1[i][0].getTime() === time1.getTime()) i++;
+            while (j < arr2.length && arr2[j][0].getTime() === time1.getTime()) j++;
         }
     }
 
     // Append remaining entries from either array
     while (i < arr1.length) result.push(arr1[i++]);
-    while (j < arr2.length) {
-        let tempRow = arr2[j++];
-        while (j < arr2.length && arr2[j][0].getTime() === tempRow[0].getTime()) {
-            tempRow = mergeRows(tempRow, arr2[j++]);
-        }
-        result.push(tempRow);
-    }
+    while (j < arr2.length) result.push(arr2[j++]);
 
     return result;
+}
+
+function mergeAllAtSameTimestamp(arr1: row[], arr2: row[], timestamp: Date, startIndex1: number, startIndex2: number): row {
+    // Initialize a merged row with the timestamp and null values for subsequent entries
+    let mergedRow: row = [timestamp, ...new Array(arr1[startIndex1].length - 1).fill(null)];
+
+    // Aggregate all rows at the given timestamp from arr1
+    for (let k = startIndex1; k < arr1.length && arr1[k][0].getTime() === timestamp.getTime(); k++) {
+        mergedRow = mergeRows(mergedRow, arr1[k]);
+    }
+
+    // Aggregate all rows at the given timestamp from arr2
+    for (let k = startIndex2; k < arr2.length && arr2[k][0].getTime() === timestamp.getTime(); k++) {
+        mergedRow = mergeRows(mergedRow, arr2[k]);
+    }
+
+    return mergedRow;
 }
 
 function mergeRows(row1: row, row2: row): row {
     let mergedRow: row = [row1[0]]; // Use the date from either row
     for (let k = 1; k < row1.length; k++) {
-        // Overwrite nulls in row1 with non-nulls from row2
         mergedRow.push(row1[k] !== null ? row1[k] : row2[k]);
     }
     return mergedRow;
