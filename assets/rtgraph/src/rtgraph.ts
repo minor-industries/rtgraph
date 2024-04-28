@@ -227,6 +227,70 @@ class Graph {
     }
 }
 
-export function combineData(): number {
-    return 42;
+export type row = [Date, ...(number | null)[]];
+
+function findMergeIndex(existing: row[], firstExtraDate: Date) {
+    let insertionIndex = existing.length - 1;
+    while (insertionIndex >= 0 && existing[insertionIndex][0] >= firstExtraDate) {
+        insertionIndex--;
+    }
+    insertionIndex++;
+    return insertionIndex;
+}
+
+export function combineData(existing: row[], extra: row[]): row[] {
+    extra.sort((a, b) => a[0].getTime() - b[0].getTime());
+
+    const firstExtraDate = extra[0][0];
+    const mergeIndex = findMergeIndex(existing, firstExtraDate);
+
+    const slicedExisting = existing.slice(mergeIndex);
+    const merged = mergeArrays(slicedExisting, extra);
+
+    const overwriteCount = existing.length - mergeIndex;
+    const appendCount = merged.length - overwriteCount;
+
+    let mergedPos = 0;
+    for (let i = 0; i < overwriteCount; i++) {
+        existing[mergeIndex + i] = merged[mergedPos++];
+    }
+
+    for (let i = 0; i < appendCount; i++) {
+        existing.push(merged[mergedPos++])
+    }
+
+    return existing;
+}
+
+function mergeArrays(arr1: row[], arr2: row[]): row[] {
+    let result: row[] = [];
+    let i = 0, j = 0;
+
+    while (i < arr1.length && j < arr2.length) {
+        const time1 = arr1[i][0].getTime();
+        const time2 = arr2[j][0].getTime();
+
+        if (time1 < time2) {
+            result.push(arr1[i++]);
+        } else if (time1 > time2) {
+            result.push(arr2[j++]);
+        } else {
+            result.push(mergeRows(arr1[i++], arr2[j++]));
+        }
+    }
+
+    // Append remaining entries from either array
+    while (i < arr1.length) result.push(arr1[i++]);
+    while (j < arr2.length) result.push(arr2[j++]);
+
+    return result;
+}
+
+function mergeRows(row1: row, row2: row): row {
+    let mergedRow: row = [row1[0]]; // Use the date from either row
+    for (let k = 1; k < row1.length; k++) {
+        // Overwrite nulls in row1 with non-nulls from row2
+        mergedRow.push(row1[k] !== null ? row1[k] : row2[k]);
+    }
+    return mergedRow;
 }
