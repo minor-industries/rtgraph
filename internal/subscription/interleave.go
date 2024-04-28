@@ -10,8 +10,9 @@ func floatP(v float32) *float32 {
 }
 
 type col struct {
-	Index int
-	Value schema.Value
+	Index     int
+	Timestamp time.Time
+	Value     float64
 }
 
 type row []col
@@ -51,7 +52,11 @@ func interleave(
 		minSeries := allSeries[minIdx]
 		j := indices[minIdx]
 
-		result = append(result, col{Index: minIdx, Value: minSeries[j]})
+		result = append(result, col{
+			Index:     minIdx + 1,
+			Timestamp: minSeries[j].Timestamp,
+			Value:     minSeries[j].Value,
+		})
 		indices[minIdx]++
 	}
 
@@ -65,10 +70,10 @@ func consolidate(cols []col) []row {
 	var result []row
 
 	for _, col := range cols {
-		if col.Value.Timestamp != currentTime {
+		if col.Timestamp != currentTime {
 			result = append(result, row{})
 		}
-		currentTime = col.Value.Timestamp
+		currentTime = col.Timestamp
 		result[len(result)-1] = append(result[len(result)-1], col)
 	}
 

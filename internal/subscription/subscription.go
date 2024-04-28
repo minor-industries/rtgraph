@@ -47,7 +47,6 @@ func (sub *Subscription) getInitialData(
 	start time.Time,
 	now time.Time,
 ) (*messages.Data, error) {
-
 	allSeries := make([][]schema.Value, len(sub.operators))
 	for idx, op := range sub.operators {
 		var lookback time.Duration = 0
@@ -63,59 +62,73 @@ func (sub *Subscription) getInitialData(
 			return nil, errors.Wrap(err, "load original window")
 		}
 
-		allSeries[idx] = op.ProcessNewValues(window.Values, now)
+		series := op.ProcessNewValues(window.Values, now)
+		series = sub.addGaps(idx, series)
+
+		allSeries[idx] = series
 	}
 
-	resultRows := &messages.Data{Rows: []any{}}
 	columns := interleave(allSeries)
 	rows := consolidate(columns)
 
-	for _, r := range rows {
-		for _, c := range r {
-			sub.packRow(resultRows, c.Index+1, c.Value.Timestamp, c.Value.Value)
-		}
+	resultRows := &messages.Data{Rows: []any{}}
+	for _, row := range rows {
+		sub.packRow(resultRows, row)
 	}
 
 	return resultRows, nil
 }
 
+func (sub *Subscription) addGaps(idx int, series []schema.Value) []schema.Value {
+	result := make([]schema.Value, 0, len(series))
+	for _, c := range series {
+		now := c.Timestamp
+		seen, ok := sub.lastSeen[idx]
+		sub.lastSeen[idx] = now
+
+		if ok {
+			// add a regular gap
+			dt := now.Sub(seen)
+			// insert a gap if timestamp delta exceeds threshold
+			if dt > sub.maxGap {
+				result = append(result, schema.Value{
+					Timestamp: seen.Add(time.Millisecond),
+					Value:     math.NaN(),
+				})
+			}
+		} else {
+			// add a gap just before the first point
+			result = append(result, schema.Value{
+				Timestamp: now.Add(-time.Millisecond), // TODO? reconsider
+				Value:     math.NaN(),
+			})
+		}
+		result = append(result, c)
+	}
+
+	return result
+}
+
 func (sub *Subscription) packRow(
 	data *messages.Data,
-	pos int,
-	timestamp time.Time,
-	value float64,
+	r row,
 ) {
-	row := make([]any, len(sub.operators)+1)
-	row[0] = timestamp.UnixMilli()
+	// assumes that all columns in the row are at the same timestamp
+	now := r[0].Timestamp
+
+	resultRow := make([]any, len(sub.operators)+1)
+	resultRow[0] = now.UnixMilli()
 
 	// first fill with nils
 	for i := 0; i < len(sub.operators); i++ {
-		row[i+1] = nil
+		resultRow[i+1] = nil
 	}
 
-	row[pos] = floatP(float32(value))
-
-	addGap := func() {
-		gap := make([]any, len(row))
-		copy(gap, row)
-		gap[pos] = math.NaN()
-		data.Rows = append(data.Rows, gap)
+	// overwrite any columns that exist
+	for _, c := range r {
+		resultRow[c.Index] = floatP(float32(c.Value))
+		data.Rows = append(data.Rows, resultRow)
 	}
-
-	seen, ok := sub.lastSeen[pos]
-	sub.lastSeen[pos] = timestamp
-
-	if ok {
-		dt := timestamp.Sub(seen)
-		// insert a gap if timestamp delta exceeds threshold
-		if dt > sub.maxGap {
-			addGap()
-		}
-	} else {
-		addGap()
-	}
-
-	data.Rows = append(data.Rows, row)
 }
 
 func (sub *Subscription) inputMap() map[string][]int {
@@ -130,9 +143,21 @@ func (sub *Subscription) inputMap() map[string][]int {
 func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Data, error) {
 	data := &messages.Data{Rows: []interface{}{}}
 
-	for _, v := range values {
-		// TODO: don't love how data is passed in here, can we return the row (or do something else)?
-		sub.packRow(data, pos, v.Timestamp, v.Value)
+	gapped := sub.addGaps(pos, values)
+
+	var cols []col
+	for _, v := range gapped {
+		cols = append(cols, col{
+			Index:     pos,
+			Timestamp: v.Timestamp,
+			Value:     v.Value,
+		})
+	}
+
+	rows := consolidate(cols) // this may be unnecessary
+
+	for _, row := range rows {
+		sub.packRow(data, row)
 	}
 
 	return data, nil
