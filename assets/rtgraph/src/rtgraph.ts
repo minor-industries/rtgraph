@@ -239,6 +239,10 @@ function findMergeIndex(existing: row[], firstExtraDate: Date) {
 }
 
 export function combineData(existing: row[], extra: row[]): row[] {
+    if (extra.length === 0) {
+        return existing;
+    }
+
     extra.sort((a, b) => a[0].getTime() - b[0].getTime());
 
     const firstExtraDate = extra[0][0];

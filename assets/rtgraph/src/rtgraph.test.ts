@@ -12,8 +12,22 @@ function getExisting(): row[] {
     ]
 }
 
+test('empty append', () => {
+    const result = combineData(getExisting(), [
+        [new Date(now + 4 * s), 1.4, null, null],
+    ]);
+    expect(result).toEqual([
+        [new Date(now), 1.0, 2.0, 3.0],
+        [new Date(now + s), 1.1, null, null],
+        [new Date(now + 2 * s), 1.2, null, null],
+        [new Date(now + 3 * s), 1.3, null, null],
+        [new Date(now + 4 * s), 1.4, null, null],
+    ]);
+})
+
 test('simple append', () => {
-    expect(false).toBe(true);
+    const result = combineData(getExisting(), []);
+    expect(result).toEqual(getExisting());
 })
 
 test('simple out-of-order', () => {
