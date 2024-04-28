@@ -154,7 +154,7 @@ func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Dat
 		})
 	}
 
-	rows := consolidate(cols) // this may be unnecessary
+	rows := testconsolidate(cols) // this may be unnecessary
 
 	for _, row := range rows {
 		sub.packRow(data, row)

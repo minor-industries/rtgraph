@@ -226,3 +226,7 @@ class Graph {
         setTimeout(() => this.connect(), 1000);
     }
 }
+
+export function combineData(): number {
+    return 42;
+}
