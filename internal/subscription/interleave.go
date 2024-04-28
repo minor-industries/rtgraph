@@ -18,8 +18,8 @@ type row []col
 
 func interleave(
 	allSeries [][]schema.Value,
-) []row {
-	var result []row
+) []col {
+	var result []col
 
 	// TODO: interleave could use some tests!
 	indices := make([]int, len(allSeries))
@@ -51,11 +51,25 @@ func interleave(
 		minSeries := allSeries[minIdx]
 		j := indices[minIdx]
 
-		result = append(result, row{
-			{Index: minIdx, Value: minSeries[j]},
-		})
-
+		result = append(result, col{Index: minIdx, Value: minSeries[j]})
 		indices[minIdx]++
+	}
+
+	return result
+}
+
+// combine columns at the same timestamp
+func consolidate(cols []col) []row {
+	var currentTime time.Time
+
+	var result []row
+
+	for _, col := range cols {
+		if col.Value.Timestamp != currentTime {
+			result = append(result, row{})
+		}
+		currentTime = col.Value.Timestamp
+		result[len(result)-1] = append(result[len(result)-1], col)
 	}
 
 	return result

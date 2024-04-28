@@ -66,15 +66,17 @@ func (sub *Subscription) getInitialData(
 		allSeries[idx] = op.ProcessNewValues(window.Values, now)
 	}
 
-	rows := &messages.Data{Rows: []any{}}
-	rr := interleave(allSeries)
+	resultRows := &messages.Data{Rows: []any{}}
+	columns := interleave(allSeries)
+	rows := consolidate(columns)
 
-	for _, r := range rr {
-		c := r[0]
-		sub.packRow(rows, c.Index+1, c.Value.Timestamp, c.Value.Value)
+	for _, r := range rows {
+		for _, c := range r {
+			sub.packRow(resultRows, c.Index+1, c.Value.Timestamp, c.Value.Value)
+		}
 	}
 
-	return rows, nil
+	return resultRows, nil
 }
 
 func (sub *Subscription) packRow(
