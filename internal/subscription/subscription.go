@@ -67,9 +67,12 @@ func (sub *Subscription) getInitialData(
 	}
 
 	rows := &messages.Data{Rows: []any{}}
-	interleave(allSeries, func(idx int, value schema.Value) {
-		sub.packRow(rows, idx+1, value.Timestamp, value.Value)
-	})
+	rr := interleave(allSeries)
+
+	for _, r := range rr {
+		c := r[0]
+		sub.packRow(rows, c.Index+1, c.Value.Timestamp, c.Value.Value)
+	}
 
 	return rows, nil
 }

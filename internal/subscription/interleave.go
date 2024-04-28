@@ -9,10 +9,18 @@ func floatP(v float32) *float32 {
 	return &v
 }
 
+type col struct {
+	Index int
+	Value schema.Value
+}
+
+type row []col
+
 func interleave(
 	allSeries [][]schema.Value,
-	f func(index int, value schema.Value),
-) {
+) []row {
+	var result []row
+
 	// TODO: interleave could use some tests!
 	indices := make([]int, len(allSeries))
 
@@ -42,7 +50,13 @@ func interleave(
 
 		minSeries := allSeries[minIdx]
 		j := indices[minIdx]
-		f(minIdx, minSeries[j])
+
+		result = append(result, row{
+			{Index: minIdx, Value: minSeries[j]},
+		})
+
 		indices[minIdx]++
 	}
+
+	return result
 }
