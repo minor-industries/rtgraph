@@ -67,12 +67,9 @@ func (sub *Subscription) getInitialData(
 	}
 
 	rows := &messages.Data{Rows: []any{}}
-	if err := interleave(allSeries, func(idx int, value schema.Value) error {
-		// TODO: can we rewrite packRow so that it can't error?
-		return sub.packRow(rows, idx+1, value.Timestamp, value.Value)
-	}); err != nil {
-		return nil, errors.Wrap(err, "interleave")
-	}
+	interleave(allSeries, func(idx int, value schema.Value) {
+		sub.packRow(rows, idx+1, value.Timestamp, value.Value)
+	})
 
 	return rows, nil
 }
@@ -82,7 +79,7 @@ func (sub *Subscription) packRow(
 	pos int,
 	timestamp time.Time,
 	value float64,
-) error {
+) {
 	row := make([]any, len(sub.operators)+1)
 	row[0] = timestamp.UnixMilli()
 
@@ -114,7 +111,6 @@ func (sub *Subscription) packRow(
 	}
 
 	data.Rows = append(data.Rows, row)
-	return nil
 }
 
 func (sub *Subscription) inputMap() map[string][]int {
@@ -131,10 +127,7 @@ func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Dat
 
 	for _, v := range values {
 		// TODO: don't love how data is passed in here, can we return the row (or do something else)?
-		err := sub.packRow(data, pos, v.Timestamp, v.Value)
-		if err != nil {
-			return nil, errors.Wrap(err, "pack row")
-		}
+		sub.packRow(data, pos, v.Timestamp, v.Value)
 	}
 
 	return data, nil
