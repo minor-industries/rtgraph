@@ -8,7 +8,9 @@ declare module msgpack {
     export function decode(input: Uint8Array): any;
 }
 
-function mapDate([first, ...rest]: [number, ...any[]]) {
+export type row = [Date, ...(number | null)[]];
+
+function mapDate([first, ...rest]: [number, ...any[]]): row[] {
     return [new Date(first), ...rest];
 }
 
@@ -83,18 +85,21 @@ class Graph {
         return this.data.length > 0 ? this.opts.labels : [];
     }
 
-    update(rows: [Date, ...any]) {
+    update(newRows: row[]) {
         const newGraph = this.data.length === 0;
 
-        let newRows = rows.map(mapDate);
-
-        this.data.push(...newRows);
-
         if (this.opts.reorderData === true) {
+            this.data.push(...newRows);
             // TODO: can probably do better here with binary search and array splice
             this.data.sort((a, b) => {
                 return a[0] - b[0];
             })
+        } else {
+            if (this.data.length === 0) {
+                this.data.push(...newRows);
+            } else {
+                this.data = combineData(this.data, newRows)
+            }
         }
 
         if (newGraph) {
@@ -194,7 +199,8 @@ class Graph {
                 }
 
                 if (msg.rows !== undefined) {
-                    this.update(msg.rows);
+                    const mappedRows = mapDate(msg.rows)
+                    this.update(mappedRows);
                 }
             }
         };
@@ -227,7 +233,6 @@ class Graph {
     }
 }
 
-export type row = [Date, ...(number | null)[]];
 
 export function combineData(existing: row[], extra: row[]): row[] {
     if (extra.length === 0) {
