@@ -235,6 +235,8 @@ class Graph {
 
 
 export function combineData(existing: row[], extra: row[]): row[] {
+    // TODO: should handle the simple case where extra after existing with a simple append
+
     if (extra.length === 0) {
         return existing;
     }
