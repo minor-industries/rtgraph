@@ -1,24 +1,45 @@
-const mapDate = ([first, ...rest]) => [new Date(first), ...rest];
+declare class Dygraph {
+    constructor(...args: any[])
 
+    updateOptions(arg: any): void
+}
 
-function supplant(s, o) {
+declare module msgpack {
+    export function decode(input: Uint8Array): any;
+}
+
+function mapDate([first, ...rest]: [number, ...any[]]) {
+    return [new Date(first), ...rest];
+}
+
+function supplant(s: string, o: any) {
     // https://stackoverflow.com/questions/1408289/how-can-i-do-string-interpolation-in-javascript
     return s.replace(/{([^{}]*)}/g,
         function (a, b) {
             const r = o[b];
-            return typeof r === 'string' || typeof r === 'number' ? r : a;
+            return typeof r === 'string' || typeof r === 'number' ? r as string : a;
         }
     );
 }
 
 const isTouchDevice = () => {
     return (('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0) ||
-        (navigator.msMaxTouchPoints > 0));
+        (navigator.maxTouchPoints > 0));
 };
 
 class Graph {
-    constructor(elem, opts) {
+    private readonly elem: HTMLElement;
+    private opts: { [p: string]: any };
+    private readonly windowSize: number;
+    private g: Dygraph | null; // TODO
+    private t0Server: Date | undefined;
+    private t0Client: Date | undefined;
+    private data: any[];
+
+    constructor(
+        elem: HTMLElement,
+        opts: { [key: string]: any }
+    ) {
         this.elem = elem;
         this.opts = opts;
 
@@ -29,7 +50,7 @@ class Graph {
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize;
 
-        this.g = undefined;
+        this.g = null;
         this.data = [];
         this.t0Server = undefined;
         this.t0Client = undefined;
@@ -45,6 +66,12 @@ class Graph {
         if (this.windowSize === undefined || this.windowSize === null) {
             return undefined;
         }
+
+        // TODO: perhaps we need to raise an error here instead
+        if (this.t0Client === undefined || this.t0Server === undefined) {
+            return undefined;
+        }
+
         const t1Client = new Date();
         const dt = t1Client.getTime() - this.t0Client.getTime()
         const t1 = new Date(this.t0Server.getTime() + dt);
@@ -56,7 +83,7 @@ class Graph {
         return this.data.length > 0 ? this.opts.labels : [];
     }
 
-    update(rows) {
+    update(rows: [Date, ...any]) {
         const newGraph = this.data.length === 0;
 
         let newRows = rows.map(mapDate);
@@ -72,7 +99,7 @@ class Graph {
 
         if (newGraph) {
             let labels = this.computeLabels();
-            let opts = {
+            let opts: { [key: string]: any } = {
                 // dateWindow: [t0, t1],
                 title: supplant(this.opts.title, {value: ""}), // TODO: do better here
                 ylabel: this.opts.ylabel,
@@ -93,7 +120,7 @@ class Graph {
 
             this.g = new Dygraph(this.elem, this.data, opts);
         } else {
-            let updateOpts = {
+            let updateOpts: { [key: string]: any } = {
                 file: this.data,
                 labels: this.computeLabels()
             };
@@ -107,11 +134,11 @@ class Graph {
                 }
             }
 
-            this.g.updateOptions(updateOpts);
+            this.g!.updateOptions(updateOpts);
         }
     }
 
-    setDate(date) {
+    setDate(date: Date) {
         const firstSet = this.t0Server === undefined;
 
         this.t0Server = date;
@@ -131,7 +158,7 @@ class Graph {
             if (this.g === undefined) {
                 return;
             }
-            this.g.updateOptions({
+            this.g!.updateOptions({
                 dateWindow: this.computeDateWindow(),
             })
         }, 250);
