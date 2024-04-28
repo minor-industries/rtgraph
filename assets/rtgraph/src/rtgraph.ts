@@ -277,15 +277,32 @@ function mergeArrays(arr1: row[], arr2: row[]): row[] {
         if (time1 < time2) {
             result.push(arr1[i++]);
         } else if (time1 > time2) {
-            result.push(arr2[j++]);
+            // Handle multiple entries with the same timestamp in arr2 before a new timestamp in arr1
+            let tempRow = arr2[j++];
+            while (j < arr2.length && arr2[j][0].getTime() === time2) {
+                tempRow = mergeRows(tempRow, arr2[j++]);
+            }
+            result.push(tempRow);
         } else {
-            result.push(mergeRows(arr1[i++], arr2[j++]));
+            // If timestamps match, merge all matching arr2 rows into arr1 row before incrementing i
+            let mergedRow = arr1[i];
+            do {
+                mergedRow = mergeRows(mergedRow, arr2[j++]);
+            } while (j < arr2.length && arr2[j][0].getTime() === time1);
+            result.push(mergedRow);
+            i++;
         }
     }
 
     // Append remaining entries from either array
     while (i < arr1.length) result.push(arr1[i++]);
-    while (j < arr2.length) result.push(arr2[j++]);
+    while (j < arr2.length) {
+        let tempRow = arr2[j++];
+        while (j < arr2.length && arr2[j][0].getTime() === tempRow[0].getTime()) {
+            tempRow = mergeRows(tempRow, arr2[j++]);
+        }
+        result.push(tempRow);
+    }
 
     return result;
 }
