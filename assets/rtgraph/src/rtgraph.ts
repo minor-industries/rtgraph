@@ -8,7 +8,7 @@ declare module msgpack {
     export function decode(input: Uint8Array): any;
 }
 
-export type row = [Date, ...(number | null)[]];
+type row = [Date, ...(number | null)[]];
 
 function mapDate([first, ...rest]: [number, ...any[]]): row[] {
     return [new Date(first), ...rest];
@@ -199,7 +199,7 @@ class Graph {
                 }
 
                 if (msg.rows !== undefined) {
-                    const mappedRows = mapDate(msg.rows)
+                    const mappedRows = msg.rows.map(mapDate);
                     this.update(mappedRows);
                 }
             }
@@ -234,7 +234,7 @@ class Graph {
 }
 
 
-export function combineData(existing: row[], extra: row[]): row[] {
+function combineData(existing: row[], extra: row[]): row[] {
     // TODO: should handle the simple case where extra after existing with a simple append
 
     if (extra.length === 0) {
