@@ -10,6 +10,43 @@ function printRows(name: string, rows: row[]) {
     })
 }
 
+function check(condition: boolean, desc: string) {
+    if (!condition) {
+        const error = new Error(desc);
+        alert(error);
+        throw error;
+    }
+}
+
+function isSorted(rows: row[]): boolean {
+    if (rows.length < 2) {
+        return true;
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+        const r0 = rows[i - 1];
+        const r1 = rows[i];
+
+        if (r0[0].getTime() >= r1[0].getTime()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function allDefined(rows: row[]): boolean {
+    for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        if (r === undefined) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 export function combineData(existing: row[], extra: row[]): row[] {
     // TODO: should handle the simple case where extra after existing with a simple append
 
@@ -19,27 +56,31 @@ export function combineData(existing: row[], extra: row[]): row[] {
 
     extra.sort((a, b) => a[0].getTime() - b[0].getTime());
 
+    check(allDefined(existing), "before: existing rows all defined");
+    check(isSorted(existing), "before: existing is sorted")
+
     const firstExtraDate = extra[0][0];
-    console.log("date", firstExtraDate)
+    // console.log("date", firstExtraDate)
     const mergeIndex = findMergeIndex(existing, firstExtraDate);
-    console.log("mergeIndex", mergeIndex)
+    // console.log("mergeIndex", mergeIndex)
 
-    printRows("existing", existing);
+    // printRows("existing", existing);
 
-    console.log("existing.length", existing.length);
+    // console.log("existing.length", existing.length);
 
     const slicedExisting = existing.slice(mergeIndex);
-    printRows("slicedExisting", slicedExisting)
-    printRows("extra", extra)
+    // printRows("slicedExisting", slicedExisting)
+    // printRows("extra", extra)
 
     const merged = mergeArrays(slicedExisting, extra);
-    printRows("merged", merged)
+    // printRows("merged", merged)
 
     const overwriteCount = existing.length - mergeIndex;
-    console.log("overwriteCount", overwriteCount)
+    // console.log("overwriteCount", overwriteCount)
 
     const appendCount = merged.length - overwriteCount;
-    console.log("appendCount", appendCount)
+    check(appendCount >= 0, "appendCount >= 0")
+    // console.log("appendCount", appendCount)
 
     let mergedPos = 0;
     for (let i = 0; i < overwriteCount; i++) {
@@ -49,6 +90,9 @@ export function combineData(existing: row[], extra: row[]): row[] {
     for (let i = 0; i < appendCount; i++) {
         existing.push(merged[mergedPos++])
     }
+
+    check(allDefined(existing), "after: existing rows all defined");
+    check(isSorted(existing), "after: existing is sorted");
 
     existing.forEach(row => {
         if (row === undefined) {
