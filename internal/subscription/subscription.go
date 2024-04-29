@@ -73,16 +73,19 @@ func (sub *Subscription) getInitialData(
 		Series: make([]messages.Series, len(allSeries)),
 	}
 
-	for idx, row := range allSeries {
-		result.Series[idx] = messages.Series{
-			Pos:     idx,
-			Samples: make([]messages.Sample, len(row)),
+	for idx, series := range allSeries {
+		timestamps := make([]int64, len(series))
+		values := make([]float64, len(series))
+
+		for i, s := range series {
+			timestamps[i] = s.Timestamp.UnixMilli()
+			values[i] = s.Value
 		}
-		for i, s := range row {
-			result.Series[idx].Samples[i] = messages.Sample{
-				Timestamp: s.Timestamp.UnixMilli(),
-				Value:     s.Value,
-			}
+
+		result.Series[idx] = messages.Series{
+			Pos:        idx,
+			Timestamps: timestamps,
+			Values:     values,
 		}
 	}
 
@@ -218,20 +221,20 @@ func (sub *Subscription) produceAllSeries(
 		if out, ok := computedMap[msg.SeriesName]; ok {
 			for _, idx := range out {
 				op := sub.operators[idx]
-				output := op.ProcessNewValues(msg.Values, now)
+				series := op.ProcessNewValues(msg.Values, now)
 
-				samples := make([]messages.Sample, len(output))
+				timestamps := make([]int64, len(series))
+				values := make([]float64, len(series))
 
-				for i, value := range output {
-					samples[i] = messages.Sample{
-						Timestamp: value.Timestamp.UnixMilli(),
-						Value:     value.Value,
-					}
+				for i, s := range series {
+					timestamps[i] = s.Timestamp.UnixMilli()
+					values[i] = s.Value
 				}
 
 				data.Series = append(data.Series, messages.Series{
-					Pos:     idx,
-					Samples: samples,
+					Pos:        idx,
+					Timestamps: timestamps,
+					Values:     values,
 				})
 			}
 		}

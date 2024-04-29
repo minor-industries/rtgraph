@@ -2,14 +2,10 @@ package messages
 
 //go:generate msgp
 
-type Sample struct {
-	Timestamp int64
-	Value     float64
-}
-
 type Series struct {
-	Pos     int
-	Samples []Sample
+	Pos        int
+	Timestamps []int64
+	Values     []float64
 }
 
 type Data struct {

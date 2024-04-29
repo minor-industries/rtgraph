@@ -1,5 +1,6 @@
-const sum = require('./interleave');
+const interleave = require('./interleave');
+const data = require("./data.json");
 
-test('adds 1 + 2 to equal 3', () => {
-    expect(sum()).toBe(3);
+test('interleave', () => {
+    interleave(data);
 });
