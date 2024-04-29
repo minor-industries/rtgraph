@@ -104,9 +104,9 @@ export class Graph {
         } else {
             if (this.data.length === 0) {
                 this.data = this.cache.interleave(newRows);
-                // this.data = interleave(newRows);
             } else {
-                this.cache.append(newRows); // TODO: assign data to result
+                const rendered = this.cache.append(newRows); // TODO: assign data to result
+                this.data.push(...rendered);
             }
         }
 
