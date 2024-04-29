@@ -1,21 +1,73 @@
-function consolidate(data) {
+function consolidate(allPoints) {
     let result = []
-
     let acc = [];
 
-    
+    allPoints.forEach(point => {
+        if (acc.length === 0 || acc[0].timestamp === point.timestamp) {
+            acc.push(point);
+        } else {
+            result.push(acc);
+            acc = [point];
+        }
+    });
+
+    if (acc.length > 0) {
+        result.push(acc);
+    }
+
+    return result;
+}
+
+function render(numSeries, merged) {
+    let result = []
+
+    merged.forEach(r => {
+        const row = new Array(numSeries + 1);
+        row.fill(null, 1);
+        row[0] = new Date(r[0].timestamp);
+
+        r.forEach(c => {
+            row[c.pos + 1] = c.value;
+        })
+
+        result.push(row);
+    })
+
+    return result;
 }
 
 
 function interleave(data) {
-    console.log(JSON.stringify(data, null, 2));
+    const numSeries = data.length;
+    console.log(numSeries);
+
+    const allPoints = [];
 
     data.forEach(series => {
-        console.log(series.Pos);
-        series.Samples.forEach(sample => {
-            console.log(sample.Timestamp, sample.Value);
-        })
+        for (let i = 0; i < series.Timestamps.length; i++) {
+            const timestamp = series.Timestamps[i];
+            const value = series.Values[i];
+            allPoints.push({
+                timestamp: timestamp,
+                pos: series.Pos,
+                value: value,
+            })
+        }
     })
+
+    allPoints.sort((a, b) => {
+        return a.timestamp - b.timestamp;
+    })
+
+    console.log(JSON.stringify(allPoints, null, 2));
+
+    const merged = consolidate(allPoints);
+
+    console.log(JSON.stringify(merged, null, 2));
+
+    const rendered = render(numSeries, merged);
+
+    console.log(JSON.stringify(rendered, null, 2));
 }
 
 module.exports = interleave;
