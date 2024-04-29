@@ -127,8 +127,9 @@ func (sub *Subscription) packRow(
 	// overwrite any columns that exist
 	for _, c := range r {
 		resultRow[c.Index] = floatP(float32(c.Value))
-		data.Rows = append(data.Rows, resultRow)
 	}
+
+	data.Rows = append(data.Rows, resultRow)
 }
 
 func (sub *Subscription) inputMap() map[string][]int {
