@@ -65,16 +65,22 @@ func interleave(
 
 // combine columns at the same timestamp
 func consolidate(cols []col) []row {
-	var currentTime time.Time
-
 	var result []row
 
+	var acc row
+
 	for _, col := range cols {
-		if col.Timestamp != currentTime {
-			result = append(result, row{})
+		if len(acc) == 0 || col.Timestamp == acc[0].Timestamp {
+			acc = append(acc, col)
+		} else {
+			result = append(result, acc)
+			acc = row{col}
 		}
-		currentTime = col.Timestamp
-		result[len(result)-1] = append(result[len(result)-1], col)
+	}
+
+	// last group
+	if len(acc) > 0 {
+		result = append(result, acc)
 	}
 
 	return result
