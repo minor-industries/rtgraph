@@ -43,10 +43,26 @@ export function interleave(data) {
 
     const allPoints = [];
 
+    const lastSeen = {};
+
     data.forEach(series => {
         for (let i = 0; i < series.Timestamps.length; i++) {
             const timestamp = series.Timestamps[i];
             const value = series.Values[i];
+
+            const last = lastSeen[series.Pos]
+            lastSeen[series.Pos] = timestamp;
+
+            if (last !== undefined) {
+                if (timestamp - last > 1600) {
+                    allPoints.push({
+                        timestamp: timestamp - 1,
+                        pos: series.Pos,
+                        value: NaN,
+                    })
+                }
+            }
+
             allPoints.push({
                 timestamp: timestamp,
                 pos: series.Pos,
@@ -59,14 +75,14 @@ export function interleave(data) {
         return a.timestamp - b.timestamp;
     })
 
-    // console.log(JSON.stringify(allPoints, null, 2));
+    console.log(JSON.stringify(allPoints, null, 2));
 
     const merged = consolidate(allPoints);
 
-    // console.log(JSON.stringify(merged, null, 2));
+    console.log(JSON.stringify(merged, null, 2));
 
     const rendered = render(numSeries, merged);
 
-    // console.log(JSON.stringify(rendered, null, 2));
+    console.log(JSON.stringify(rendered, null, 2));
     return rendered;
 }
