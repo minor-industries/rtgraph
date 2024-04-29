@@ -15,7 +15,7 @@
 
     <script type="text/javascript" src="rtgraph/dygraph.min.js"></script>
     <script type="text/javascript" src="rtgraph/msgpack.min.js"></script>
-    <script type="text/javascript" src="rtgraph/dist/rtgraph.js"></script>
+    <script type="module" src="rtgraph/dist/rtgraph.js"></script>
 
     <style>
         .content {
@@ -40,10 +40,15 @@
         }
     </style>
 
-    <script type="text/javascript">
-        const minute = 1000 * 60;
+    <script type="module">
+        import {Graph} from './rtgraph/dist/rtgraph.js';
 
         Dygraph.onDOMready(function onDOMready() {
+
+
+            // Create an instance of Graph
+            const minute = 1000 * 60;
+
             new Graph(document.getElementById("graphdiv0"), {
                 seriesNames: [
                     "sample1 | gt 0.2",
