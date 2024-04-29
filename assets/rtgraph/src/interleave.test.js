@@ -1,6 +1,11 @@
-const interleave = require('./interleave');
-const data = require("./data.json");
+// const interleave = require('./interleave');
+import {interleave} from "./interleave.js";
+import data from './data.json' assert {type: 'json'};
 
-test('interleave', () => {
-    interleave(data);
+describe('Calculator', function () {
+    it('should return 3 when adding 1 and 2', function () {
+        interleave(data);
+    });
 });
+
+

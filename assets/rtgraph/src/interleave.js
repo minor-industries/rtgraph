@@ -37,7 +37,7 @@ function render(numSeries, merged) {
 }
 
 
-function interleave(data) {
+export function interleave(data) {
     const numSeries = data.length;
     console.log(numSeries);
 
@@ -69,5 +69,3 @@ function interleave(data) {
 
     console.log(JSON.stringify(rendered, null, 2));
 }
-
-module.exports = interleave;

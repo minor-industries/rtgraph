@@ -1,8 +1,10 @@
 {
   "devDependencies": {
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "mocha": "^10.4.0"
   },
+  "type": "module",
   "scripts": {
-    "test": "jest"
+    "test": "mocha"
   }
 }
