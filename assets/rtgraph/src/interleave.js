@@ -67,9 +67,13 @@ export class Cache {
             this.present.push(present);
         })
 
-        const result = [];
 
-        for (let i = 0; i < this.timestamps.length; i++) {
+        return this.renderResult(0);
+    }
+
+    renderResult(start) {
+        const result = [];
+        for (let i = start; i < this.timestamps.length; i++) {
             const row = new Array(this.numSeries + 1);
             row.fill(null, 1);
             row[0] = new Date(this.timestamps[i]);
@@ -86,6 +90,49 @@ export class Cache {
         }
 
         return result;
+    }
+
+    appendSingle(sample) {
+        let idx = this.timestamps.length - 1;
+        const maxTimestamp = this.timestamps[idx];
+
+        if (sample.timestamp < maxTimestamp) {
+            // for now ignore out-of-order timestamps;
+            console.log("before");
+        } else if (sample.timestamp === maxTimestamp) {
+            console.log("equal");
+            this.present[idx] |= (1 << sample.pos);
+            console.log(this.present[idx]);
+            this.series[sample.pos][idx] = sample.value;
+        } else {
+            console.log("after");
+            idx++;
+            this.timestamps.push(sample.timestamp)
+            this.present.push((1 << sample.pos))
+            for (let i = 0; i < this.numSeries; i++) {
+                this.series[i].push(0.0);
+            }
+            this.series[sample.pos][idx] = sample.value;
+        }
+    }
+
+    append(data) {
+        const idx = this.timestamps.length - 1;
+
+        data.forEach(series => {
+            const pos = series.Pos;
+            for (let i = 0; i < series.Timestamps.length; i++) {
+                const timestamp = series.Timestamps[i];
+                const value = series.Values[i];
+                this.appendSingle({
+                    timestamp: timestamp,
+                    pos: pos,
+                    value: value,
+                })
+            }
+        })
+
+        return this.renderResult(idx + 1);
     }
 }
 

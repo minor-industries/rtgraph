@@ -39,6 +39,7 @@ export class Graph {
     private t0Server: Date | undefined;
     private t0Client: Date | undefined;
     private data: any[];
+    private cache: Cache;
 
     constructor(
         elem: HTMLElement,
@@ -46,6 +47,10 @@ export class Graph {
     ) {
         this.elem = elem;
         this.opts = opts;
+        this.cache = new Cache(
+            this.opts.seriesNames.length,
+            this.opts.maxGapMs ?? 60 * 1000
+        );
 
         if (this.opts.labels === undefined || this.opts.labels === null) {
             throw new Error("labels not given");
@@ -98,12 +103,10 @@ export class Graph {
             })
         } else {
             if (this.data.length === 0) {
-                const cache = new Cache(4, 2000);
-                this.data = cache.interleave(newRows);
+                this.data = this.cache.interleave(newRows);
                 // this.data = interleave(newRows);
             } else {
-                console.log(JSON.stringify(newRows, null, 2));
-                // this.data = combineData(this.data, newRows)
+                this.cache.append(newRows); // TODO: assign data to result
             }
         }
 
