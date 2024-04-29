@@ -129,7 +129,7 @@ function render(numSeries, merged) {
 }
 
 
-export function interleave(data) {
+export function interleave(data, maxTimestampMS) {
     const numSeries = data.length;
     console.log(numSeries);
 
@@ -146,7 +146,7 @@ export function interleave(data) {
             lastSeen[series.Pos] = timestamp;
 
             if (last !== undefined) {
-                if (timestamp - last > 1600) {
+                if (timestamp - last > maxTimestampMS) {
                     allPoints.push({
                         timestamp: timestamp - 1,
                         pos: series.Pos,
