@@ -70,7 +70,7 @@ func consolidate(cols []col) []row {
 	var acc row
 
 	for _, col := range cols {
-		if len(acc) == 0 || col.Timestamp == acc[0].Timestamp {
+		if len(acc) == 0 || col.Timestamp.UnixMilli() == acc[0].Timestamp.UnixMilli() {
 			acc = append(acc, col)
 		} else {
 			result = append(result, acc)
