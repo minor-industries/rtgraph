@@ -1,5 +1,5 @@
 // @ts-ignore
-import {interleave} from "./interleave.js"
+import {Cache, interleave} from "./interleave.js"
 import {row} from "./combine.js"
 
 declare class Dygraph {
@@ -98,8 +98,11 @@ export class Graph {
             })
         } else {
             if (this.data.length === 0) {
-                this.data = interleave(newRows);
+                const cache = new Cache(4, 2000);
+                this.data = cache.interleave(newRows);
+                // this.data = interleave(newRows);
             } else {
+                console.log(JSON.stringify(newRows, null, 2));
                 // this.data = combineData(this.data, newRows)
             }
         }
@@ -234,3 +237,4 @@ export class Graph {
         setTimeout(() => this.connect(), 1000);
     }
 }
+
