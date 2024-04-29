@@ -35,6 +35,7 @@ func (g *Graph) setupServer() error {
 
 		"rtgraph/dist/rtgraph.js", "application/javascript",
 		"rtgraph/dist/combine.js", "application/javascript",
+		"rtgraph/dist/interleave.js", "application/javascript",
 		"rtgraph/rtgraph.css", "text/css",
 
 		"rtgraph/purecss/base-min.css", "text/css",

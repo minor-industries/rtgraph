@@ -59,13 +59,14 @@ export function interleave(data) {
         return a.timestamp - b.timestamp;
     })
 
-    console.log(JSON.stringify(allPoints, null, 2));
+    // console.log(JSON.stringify(allPoints, null, 2));
 
     const merged = consolidate(allPoints);
 
-    console.log(JSON.stringify(merged, null, 2));
+    // console.log(JSON.stringify(merged, null, 2));
 
     const rendered = render(numSeries, merged);
 
-    console.log(JSON.stringify(rendered, null, 2));
+    // console.log(JSON.stringify(rendered, null, 2));
+    return rendered;
 }

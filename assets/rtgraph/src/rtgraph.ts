@@ -1,4 +1,6 @@
-import {combineData, row} from "./combine.js"
+// @ts-ignore
+import {interleave} from "./interleave.js"
+import {row} from "./combine.js"
 
 declare class Dygraph {
     constructor(...args: any[])
@@ -96,9 +98,9 @@ export class Graph {
             })
         } else {
             if (this.data.length === 0) {
-                this.data.push(...newRows);
+                this.data = interleave(newRows);
             } else {
-                this.data = combineData(this.data, newRows)
+                // this.data = combineData(this.data, newRows)
             }
         }
 
@@ -199,9 +201,8 @@ export class Graph {
                 }
 
                 if (msg.rows !== undefined) {
-                    console.log(JSON.stringify(msg.rows));
-                    const mappedRows = msg.rows.map(mapDate);
-                    this.update(mappedRows);
+                    // const mappedRows = msg.rows.map(mapDate);
+                    this.update(msg.rows);
                 }
             }
         };
