@@ -15,7 +15,7 @@ export class Cache {
         let allPoints = [];
 
         data.forEach(series => {
-            //TODO: add gaps to each series independently
+            //TODO: add gaps to each series independently? or not?
 
             for (let i = 0; i < series.Timestamps.length; i++) {
                 const timestamp = series.Timestamps[i];
