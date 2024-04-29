@@ -12,41 +12,8 @@ export class Cache {
     }
 
     interleave(data) {
-        let allPoints = [];
-
-        data.forEach(series => {
-            //TODO: add gaps to each series independently? or not?
-
-            for (let i = 0; i < series.Timestamps.length; i++) {
-                const timestamp = series.Timestamps[i];
-                const value = series.Values[i];
-
-                const last = this.lastSeen[series.Pos]
-                this.lastSeen[series.Pos] = timestamp;
-
-                if (last !== undefined) {
-                    if (timestamp - last > this.maxGapMS) {
-                        allPoints.push({
-                            timestamp: timestamp - 1,
-                            pos: series.Pos,
-                            value: NaN,
-                        })
-                    }
-                }
-
-                allPoints.push({
-                    timestamp: timestamp,
-                    pos: series.Pos,
-                    value: value,
-                })
-            }
-        })
-
-        allPoints.sort((a, b) => {
-            return a.timestamp - b.timestamp;
-        })
-
-        let merged = consolidate(allPoints);
+        const flat = this.flattenAndAddGaps(data);
+        const merged = consolidate(flat);
 
         merged.forEach(row => {
             const col0 = row[0];
@@ -98,14 +65,11 @@ export class Cache {
 
         if (sample.timestamp < maxTimestamp) {
             // for now ignore out-of-order timestamps;
-            console.log("before");
         } else if (sample.timestamp === maxTimestamp) {
-            console.log("equal");
             this.present[idx] |= (1 << sample.pos);
             console.log(this.present[idx]);
             this.series[sample.pos][idx] = sample.value;
         } else {
-            console.log("after");
             idx++;
             this.timestamps.push(sample.timestamp)
             this.present.push((1 << sample.pos))
@@ -133,6 +97,44 @@ export class Cache {
         })
 
         return this.renderResult(idx + 1);
+    }
+
+    flattenAndAddGaps(data) {
+        let flat = [];
+
+        data.forEach(series => {
+            //TODO: add gaps to each series independently? or not?
+
+            for (let i = 0; i < series.Timestamps.length; i++) {
+                const timestamp = series.Timestamps[i];
+                const value = series.Values[i];
+
+                const last = this.lastSeen[series.Pos]
+                this.lastSeen[series.Pos] = timestamp;
+
+                if (last !== undefined) {
+                    if (timestamp - last > this.maxGapMS) {
+                        flat.push({
+                            timestamp: timestamp - 1,
+                            pos: series.Pos,
+                            value: NaN,
+                        })
+                    }
+                }
+
+                flat.push({
+                    timestamp: timestamp,
+                    pos: series.Pos,
+                    value: value,
+                })
+            }
+        })
+
+        flat.sort((a, b) => {
+            return a.timestamp - b.timestamp;
+        })
+
+        return flat;
     }
 }
 
