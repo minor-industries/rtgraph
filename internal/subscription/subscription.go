@@ -63,23 +63,33 @@ func (sub *Subscription) getInitialData(
 		}
 
 		series := op.ProcessNewValues(window.Values, now)
-		series = sub.addGaps(idx, series)
-
 		allSeries[idx] = series
 	}
 
-	columns := interleave(allSeries)
-	rows := consolidate(columns)
+	//columns := interleave(allSeries)
+	//rows := consolidate_(columns)
 
-	resultRows := &messages.Data{Rows: []any{}}
-	for _, row := range rows {
-		sub.packRow(resultRows, row)
+	result := &messages.Data{
+		Series: make([]messages.Series, len(allSeries)),
 	}
 
-	return resultRows, nil
+	for idx, row := range allSeries {
+		result.Series[idx] = messages.Series{
+			Pos:     idx,
+			Samples: make([]messages.Sample, len(row)),
+		}
+		for i, s := range row {
+			result.Series[idx].Samples[i] = messages.Sample{
+				Timestamp: s.Timestamp.UnixMilli(),
+				Value:     s.Value,
+			}
+		}
+	}
+
+	return result, nil
 }
 
-func (sub *Subscription) addGaps(idx int, series []schema.Value) []schema.Value {
+func (sub *Subscription) addGaps_(idx int, series []schema.Value) []schema.Value {
 	result := make([]schema.Value, 0, len(series))
 	for _, c := range series {
 		now := c.Timestamp
@@ -109,28 +119,28 @@ func (sub *Subscription) addGaps(idx int, series []schema.Value) []schema.Value 
 	return result
 }
 
-func (sub *Subscription) packRow(
-	data *messages.Data,
-	r row,
-) {
-	// assumes that all columns in the row are at the same timestamp
-	now := r[0].Timestamp
-
-	resultRow := make([]any, len(sub.operators)+1)
-	resultRow[0] = now.UnixMilli()
-
-	// first fill with nils
-	for i := 0; i < len(sub.operators); i++ {
-		resultRow[i+1] = nil
-	}
-
-	// overwrite any columns that exist
-	for _, c := range r {
-		resultRow[c.Index] = floatP(float32(c.Value))
-	}
-
-	data.Rows = append(data.Rows, resultRow)
-}
+//func (sub *Subscription) packRow_(
+//	data *messages.Data,
+//	r row,
+//) {
+//	// assumes that all columns in the row are at the same timestamp
+//	now := r[0].Timestamp
+//
+//	resultRow := make([]any, len(sub.operators)+1)
+//	resultRow[0] = now.UnixMilli()
+//
+//	// first fill with nils
+//	for i := 0; i < len(sub.operators); i++ {
+//		resultRow[i+1] = nil
+//	}
+//
+//	// overwrite any columns that exist
+//	for _, c := range r {
+//		resultRow[c.Index] = floatP(float32(c.Value))
+//	}
+//
+//	data.Rows = append(data.Rows, resultRow)
+//}
 
 func (sub *Subscription) inputMap() map[string][]int {
 	// output is map from input series names to indices into the sub.operators array
@@ -141,28 +151,28 @@ func (sub *Subscription) inputMap() map[string][]int {
 	return result
 }
 
-func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Data, error) {
-	data := &messages.Data{Rows: []interface{}{}}
-
-	gapped := sub.addGaps(pos, values)
-
-	var cols []col
-	for _, v := range gapped {
-		cols = append(cols, col{
-			Index:     pos,
-			Timestamp: v.Timestamp,
-			Value:     v.Value,
-		})
-	}
-
-	rows := consolidate(cols) // this may be unnecessary
-
-	for _, row := range rows {
-		sub.packRow(data, row)
-	}
-
-	return data, nil
-}
+//func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Data, error) {
+//	data := &messages.Data{Rows: []interface{}{}}
+//
+//	gapped := sub.addGaps(pos, values)
+//
+//	var cols []col
+//	for _, v := range gapped {
+//		cols = append(cols, col{
+//			Index:     pos,
+//			Timestamp: v.Timestamp,
+//			Value:     v.Value,
+//		})
+//	}
+//
+//	rows := consolidate(cols) // this may be unnecessary
+//
+//	for _, row := range rows {
+//		sub.packRow(data, row)
+//	}
+//
+//	return data, nil
+//}
 
 func (sub *Subscription) Run(
 	db storage.StorageBackend,
@@ -203,21 +213,29 @@ func (sub *Subscription) produceAllSeries(
 			continue
 		}
 
+		data := &messages.Data{}
+
 		if out, ok := computedMap[msg.SeriesName]; ok {
 			for _, idx := range out {
 				op := sub.operators[idx]
-				// TODO: need better dispatch here
 				output := op.ProcessNewValues(msg.Values, now)
 
-				data, err := sub.packRows(output, idx+1)
-				if err != nil {
-					outMsg <- &messages.Data{
-						Error: errors.Wrap(err, "pack rows").Error(),
+				samples := make([]messages.Sample, len(output))
+
+				for i, value := range output {
+					samples[i] = messages.Sample{
+						Timestamp: value.Timestamp.UnixMilli(),
+						Value:     value.Value,
 					}
-					return
 				}
-				outMsg <- data
+
+				data.Series = append(data.Series, messages.Series{
+					Pos:     idx,
+					Samples: samples,
+				})
 			}
 		}
+
+		outMsg <- data
 	}
 }

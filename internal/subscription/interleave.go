@@ -17,7 +17,7 @@ type col struct {
 
 type row []col
 
-func interleave(
+func interleave_(
 	allSeries [][]schema.Value,
 ) []col {
 	var result []col

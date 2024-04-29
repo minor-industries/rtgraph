@@ -199,6 +199,7 @@ export class Graph {
                 }
 
                 if (msg.rows !== undefined) {
+                    console.log(JSON.stringify(msg.rows));
                     const mappedRows = msg.rows.map(mapDate);
                     this.update(mappedRows);
                 }
