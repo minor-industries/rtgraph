@@ -81,35 +81,16 @@ export class Cache {
     }
 
     append(data) {
-        // console.log(JSON.stringify(data, null, 2));
-
-        // console.log("--------------------------")
-
         const idx = this.timestamps.length - 1;
 
         const flat = this.flattenAndAddGaps(data);
         const merged = consolidate(flat);
-
-        // console.log(JSON.stringify(merged, null, 2));
 
         merged.forEach(row => {
             row.forEach(col => {
                 this.appendSingle(col);
             })
         })
-
-        // data.forEach(series => {
-        //     const pos = series.Pos;
-        //     for (let i = 0; i < series.Timestamps.length; i++) {
-        //         const timestamp = series.Timestamps[i];
-        //         const value = series.Values[i];
-        //         this.appendSingle({
-        //             timestamp: timestamp,
-        //             pos: pos,
-        //             value: value,
-        //         })
-        //     }
-        // })
 
         return this.renderResult(idx + 1);
     }
