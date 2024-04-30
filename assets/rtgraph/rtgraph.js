@@ -1,5 +1,4 @@
-// @ts-ignore
-import { Cache } from "../combine.js";
+import { Cache } from "./combine.js";
 function supplant(s, o) {
     // https://stackoverflow.com/questions/1408289/how-can-i-do-string-interpolation-in-javascript
     return s.replace(/{([^{}]*)}/g, function (a, b) {

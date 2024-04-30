@@ -1,5 +1,5 @@
 // const interleave = require('./interleave');
-import {Cache} from "../combine.js";
+import {Cache} from "../src/combine.ts";
 import data from './data.json' assert {type: 'json'};
 import {expect} from 'chai';
 import * as serializer from 'serialize-javascript'

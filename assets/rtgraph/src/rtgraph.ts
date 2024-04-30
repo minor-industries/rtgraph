@@ -1,5 +1,4 @@
-// @ts-ignore
-import {Cache} from "../combine.js"
+import {Cache} from "./combine.js"
 
 declare class Dygraph {
     constructor(...args: any[])
