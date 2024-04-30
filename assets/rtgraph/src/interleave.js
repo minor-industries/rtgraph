@@ -21,27 +21,34 @@ export class Cache {
 
         const flat = this.flattenAndAddGaps(data);
 
-        let row = this.newRow(flat[0].timestamp)
-        flat.forEach(col => {
-            if (row[0].getTime() !== col.timestamp) {
-                row = this.newRow(col.timestamp)
+        let row = this.newRow(flat[0][0])
+        flat.forEach(sample => {
+            const [timestamp, pos, value] = sample;
+            if (row[0].getTime() !== timestamp) {
+                row = this.newRow(timestamp)
             }
-            row[col.pos + 1] = col.value;
+            row[pos + 1] = value;
         })
     }
 
     appendSingle(sample) {
+        const [timestamp, pos, value] = sample;
+
+        if (this.data.length === 0) {
+            this.newRow(timestamp);
+        }
+
         let idx = this.data.length - 1;
         const maxTimestamp = this.data[idx][0].getTime();
 
-        if (sample.timestamp < maxTimestamp) {
-            console.log("out-of-order", sample.timestamp, maxTimestamp);
+        if (timestamp < maxTimestamp) {
+            console.log("out-of-order", timestamp, maxTimestamp);
             // for now ignore out-of-order timestamps;
-        } else if (sample.timestamp === maxTimestamp) {
-            this.data[idx][sample.pos + 1] = sample.value;
+        } else if (timestamp === maxTimestamp) {
+            this.data[idx][pos + 1] = value;
         } else {
-            const row = this.newRow(sample.timestamp)
-            row[sample.pos + 1] = sample.value;
+            const row = this.newRow(timestamp)
+            row[pos + 1] = value;
         }
     }
 
@@ -63,23 +70,14 @@ export class Cache {
                 const last = this.lastSeen[series.Pos]
                 this.lastSeen[series.Pos] = timestamp;
                 if (last !== undefined && timestamp - last > this.maxGapMS) {
-                    flat.push({
-                        timestamp: timestamp - 1,
-                        pos: series.Pos,
-                        value: NaN,
-                    })
+                    flat.push([timestamp - 1, series.Pos, NaN])
                 }
-
-                flat.push({
-                    timestamp: timestamp,
-                    pos: series.Pos,
-                    value: value,
-                })
+                flat.push([timestamp, series.Pos, value]);
             }
         })
 
         flat.sort((a, b) => {
-            return a.timestamp - b.timestamp;
+            return a[0] - b[0];
         })
 
         return flat;
