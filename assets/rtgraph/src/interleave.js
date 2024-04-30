@@ -29,6 +29,7 @@ export class Cache {
         const maxTimestamp = this.data[idx][0].getTime();
 
         if (sample.timestamp < maxTimestamp) {
+            console.log("out-of-order", sample.timestamp, maxTimestamp);
             // for now ignore out-of-order timestamps;
         } else if (sample.timestamp === maxTimestamp) {
             this.data[idx][sample.pos + 1] = sample.value;

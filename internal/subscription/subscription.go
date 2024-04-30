@@ -7,7 +7,6 @@ import (
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
 	"github.com/pkg/errors"
-	"math"
 	"time"
 )
 
@@ -66,9 +65,6 @@ func (sub *Subscription) getInitialData(
 		allSeries[idx] = series
 	}
 
-	//columns := interleave(allSeries)
-	//rows := consolidate_(columns)
-
 	result := &messages.Data{
 		Series: make([]messages.Series, len(allSeries)),
 	}
@@ -92,59 +88,6 @@ func (sub *Subscription) getInitialData(
 	return result, nil
 }
 
-func (sub *Subscription) addGaps_(idx int, series []schema.Value) []schema.Value {
-	result := make([]schema.Value, 0, len(series))
-	for _, c := range series {
-		now := c.Timestamp
-		seen, ok := sub.lastSeen[idx]
-		sub.lastSeen[idx] = now
-
-		if ok {
-			// add a regular gap
-			dt := now.Sub(seen)
-			// insert a gap if timestamp delta exceeds threshold
-			if dt > sub.maxGap {
-				result = append(result, schema.Value{
-					Timestamp: seen.Add(time.Millisecond),
-					Value:     math.NaN(),
-				})
-			}
-		} else {
-			// add a gap just before the first point
-			result = append(result, schema.Value{
-				Timestamp: now.Add(-time.Millisecond), // TODO? reconsider
-				Value:     math.NaN(),
-			})
-		}
-		result = append(result, c)
-	}
-
-	return result
-}
-
-//func (sub *Subscription) packRow_(
-//	data *messages.Data,
-//	r row,
-//) {
-//	// assumes that all columns in the row are at the same timestamp
-//	now := r[0].Timestamp
-//
-//	resultRow := make([]any, len(sub.operators)+1)
-//	resultRow[0] = now.UnixMilli()
-//
-//	// first fill with nils
-//	for i := 0; i < len(sub.operators); i++ {
-//		resultRow[i+1] = nil
-//	}
-//
-//	// overwrite any columns that exist
-//	for _, c := range r {
-//		resultRow[c.Index] = floatP(float32(c.Value))
-//	}
-//
-//	data.Rows = append(data.Rows, resultRow)
-//}
-
 func (sub *Subscription) inputMap() map[string][]int {
 	// output is map from input series names to indices into the sub.operators array
 	result := map[string][]int{}
@@ -153,29 +96,6 @@ func (sub *Subscription) inputMap() map[string][]int {
 	}
 	return result
 }
-
-//func (sub *Subscription) packRows(values []schema.Value, pos int) (*messages.Data, error) {
-//	data := &messages.Data{Rows: []interface{}{}}
-//
-//	gapped := sub.addGaps(pos, values)
-//
-//	var cols []col
-//	for _, v := range gapped {
-//		cols = append(cols, col{
-//			Index:     pos,
-//			Timestamp: v.Timestamp,
-//			Value:     v.Value,
-//		})
-//	}
-//
-//	rows := consolidate(cols) // this may be unnecessary
-//
-//	for _, row := range rows {
-//		sub.packRow(data, row)
-//	}
-//
-//	return data, nil
-//}
 
 func (sub *Subscription) Run(
 	db storage.StorageBackend,
