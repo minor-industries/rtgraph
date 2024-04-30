@@ -29,17 +29,14 @@ export class Cache {
         const maxTimestamp = this.data[idx][0].getTime();
 
         if (sample.timestamp < maxTimestamp) {
-            console.log("ignore", sample);
             // for now ignore out-of-order timestamps;
         } else if (sample.timestamp === maxTimestamp) {
             this.data[idx][sample.pos + 1] = sample.value;
-            console.log("set", sample, this.data[idx]);
         } else {
             const row = new Array(this.numSeries + 1);
             row.fill(null, 1);
             row[0] = new Date(sample.timestamp);
             row[sample.pos + 1] = sample.value;
-            console.log("append", sample, row);
             this.data.push(row);
         }
     }
@@ -136,10 +133,7 @@ function render(numSeries, merged) {
 
 export function interleave(data, maxTimestampMS) {
     const numSeries = data.length;
-    console.log(numSeries);
-
     const allPoints = [];
-
     const lastSeen = {};
 
     data.forEach(series => {
@@ -172,12 +166,7 @@ export function interleave(data, maxTimestampMS) {
         return a.timestamp - b.timestamp;
     })
 
-    // console.log(JSON.stringify(allPoints, null, 2));
-
     const merged = consolidate(allPoints);
-
-    // console.log(JSON.stringify(merged, null, 2));
-
     const rendered = render(numSeries, merged);
     return rendered;
 }

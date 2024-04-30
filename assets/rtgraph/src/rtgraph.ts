@@ -103,10 +103,11 @@ export class Graph {
             })
         } else {
             if (this.data.length === 0) {
-                this.data = this.cache.interleave(newRows);
+                this.cache.interleave(newRows);
+                this.data = this.cache.data;
             } else {
-                const rendered = this.cache.append(newRows); // TODO: assign data to result
-                this.data.push(...rendered);
+                this.cache.append(newRows);
+                this.data = this.cache.data;
             }
         }
 

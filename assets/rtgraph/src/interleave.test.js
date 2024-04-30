@@ -2,6 +2,8 @@
 import {Cache, interleave} from "./interleave.js";
 import data from './data.json' assert {type: 'json'};
 import {expect} from 'chai';
+import * as serializer from 'serialize-javascript'
+import {expected} from "./expected.js";
 
 const append = [
     {"Pos": 0, "Timestamps": [1714431888528], "Values": [0.6055667611636614]},
@@ -14,14 +16,10 @@ describe('interleave', function () {
     const maxGapMS = 1600;
 
     it('should interleave', function () {
-        const rendered = interleave(data, maxGapMS);
-
         const cache = new Cache(4, maxGapMS);
         cache.interleave(data);
-        const rendered2 = cache.data;
-
-        expect(rendered2).to.deep.equal(rendered);
-
+        console.log(serializer.default(cache.data))
+        expect(cache.data).to.deep.equal(expected);
 
         cache.append(append);
         const newRows = cache.data.slice(-5);
