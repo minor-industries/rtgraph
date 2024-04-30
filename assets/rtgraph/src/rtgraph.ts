@@ -28,13 +28,14 @@ const isTouchDevice = () => {
 
 export class Graph {
     private readonly elem: HTMLElement;
-    private opts: { [p: string]: any };
+    private readonly opts: { [p: string]: any };
+    private readonly numSeries: number;
     private readonly windowSize: number;
     private readonly dygraph: Dygraph;
+    private readonly cache: Cache;
+    private readonly labels: string[];
     private t0Server: Date | undefined;
     private t0Client: Date | undefined;
-    private cache: Cache;
-    private readonly labels: string[];
 
     constructor(
         elem: HTMLElement,
@@ -42,8 +43,9 @@ export class Graph {
     ) {
         this.elem = elem;
         this.opts = opts;
+        this.numSeries = this.opts.seriesNames.length;
         this.cache = new Cache(
-            this.opts.seriesNames.length,
+            this.numSeries,
             this.opts.maxGapMs ?? 60 * 1000
         );
 
@@ -58,7 +60,7 @@ export class Graph {
         this.t0Client = undefined;
 
         const labels: string[] = ["x"];
-        for (let i = 0; i < this.opts.seriesNames.length; i++) {
+        for (let i = 0; i < this.numSeries; i++) {
             labels.push(`y${i + 1}`);
         }
         this.labels = labels;
@@ -69,10 +71,9 @@ export class Graph {
 
     private makeGraph(): Dygraph {
         let opts: { [key: string]: any } = {
-            // dateWindow: [t0, t1],
-            title: supplant(this.opts.title, {value: ""}), // TODO: do better here
+            title: supplant(this.opts.title, {value: ""}),
             ylabel: this.opts.ylabel,
-            labels: ["x"],
+            labels: this.labels,
             includeZero: this.opts.includeZero,
             strokeWidth: this.opts.strokeWidth,
             dateWindow: this.computeDateWindow(),
@@ -87,14 +88,15 @@ export class Graph {
             opts.interactionModel = {};
         }
 
-        return new Dygraph(this.elem, [], opts);
+        const dummyRow = [new Date()].concat(new Array(this.numSeries).fill(NaN));
+        return new Dygraph(this.elem, [dummyRow], opts);
     }
 
     disableInteraction() {
         return isTouchDevice();
     }
 
-    computeDateWindow() {
+    computeDateWindow(): [Date, Date] | undefined {
         if (this.windowSize === undefined || this.windowSize === null) {
             return undefined;
         }

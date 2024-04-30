@@ -15,7 +15,8 @@ export class Graph {
         var _a;
         this.elem = elem;
         this.opts = opts;
-        this.cache = new Cache(this.opts.seriesNames.length, (_a = this.opts.maxGapMs) !== null && _a !== void 0 ? _a : 60 * 1000);
+        this.numSeries = this.opts.seriesNames.length;
+        this.cache = new Cache(this.numSeries, (_a = this.opts.maxGapMs) !== null && _a !== void 0 ? _a : 60 * 1000);
         if (this.opts.labels !== undefined) {
             throw new Error("labels no longer supported");
         }
@@ -24,7 +25,7 @@ export class Graph {
         this.t0Server = undefined;
         this.t0Client = undefined;
         const labels = ["x"];
-        for (let i = 0; i < this.opts.seriesNames.length; i++) {
+        for (let i = 0; i < this.numSeries; i++) {
             labels.push(`y${i + 1}`);
         }
         this.labels = labels;
@@ -33,10 +34,9 @@ export class Graph {
     }
     makeGraph() {
         let opts = {
-            // dateWindow: [t0, t1],
-            title: supplant(this.opts.title, { value: "" }), // TODO: do better here
+            title: supplant(this.opts.title, { value: "" }),
             ylabel: this.opts.ylabel,
-            labels: ["x"],
+            labels: this.labels,
             includeZero: this.opts.includeZero,
             strokeWidth: this.opts.strokeWidth,
             dateWindow: this.computeDateWindow(),
@@ -49,7 +49,8 @@ export class Graph {
         if (this.disableInteraction()) {
             opts.interactionModel = {};
         }
-        return new Dygraph(this.elem, [], opts);
+        const dummyRow = [new Date()].concat(new Array(this.numSeries).fill(NaN));
+        return new Dygraph(this.elem, [dummyRow], opts);
     }
     disableInteraction() {
         return isTouchDevice();
