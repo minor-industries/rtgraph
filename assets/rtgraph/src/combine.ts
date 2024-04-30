@@ -1,8 +1,10 @@
-type Series = {
+export type Series = {
     Pos: number;
     Timestamps: number[];
     Values: number[];
 };
+
+export type DygraphRow = [Date, ...(number | null)[]];
 
 type Sample = [number, number, number];
 
@@ -10,7 +12,7 @@ export class Cache {
     private lastSeen: { [key: number]: number };
     private maxGapMS: number;
     private numSeries: number;
-    data: any[];
+    private data: DygraphRow[];
 
     constructor(numSeries: number, maxGapMS: number) {
         this.lastSeen = {};
@@ -19,16 +21,16 @@ export class Cache {
         this.data = [];
     }
 
-    newRow(timestamp: number) {
-        const row = new Array(this.numSeries + 1);
+    private newRow(timestamp: number): DygraphRow {
+        const row: any = new Array(this.numSeries + 1);
         row.fill(null, 1);
         row[0] = new Date(timestamp);
         this.data.push(row)
         return row
     }
 
-    interleave(data: Series[]) {
-        if (data.length === 0 || data[0].Timestamps.length === 0) {
+    private interleave(data: Series[]) {
+        if (data.length === 0) {
             return;
         }
 
@@ -44,7 +46,7 @@ export class Cache {
         })
     }
 
-    appendSingle(sample: Sample) {
+    private appendSingle(sample: Sample) {
         const [timestamp, pos, value] = sample;
 
         if (this.data.length === 0) {
@@ -66,10 +68,22 @@ export class Cache {
     }
 
     append(data: Series[]) {
+        if (this.data.length == 0) {
+            this.interleave(data)
+        } else {
+            this.appendInternal(data);
+        }
+    }
+
+    private appendInternal(data: Series[]) {
         const flat = this.flattenAndAddGaps(data);
         flat.forEach(col => {
             this.appendSingle(col);
         })
+    }
+
+    getData(): DygraphRow[] {
+        return this.data;
     }
 
     flattenAndAddGaps(data: Series[]) {

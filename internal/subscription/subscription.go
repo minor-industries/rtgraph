@@ -65,11 +65,13 @@ func (sub *Subscription) getInitialData(
 		allSeries[idx] = series
 	}
 
-	result := &messages.Data{
-		Series: make([]messages.Series, len(allSeries)),
-	}
+	result := &messages.Data{}
 
 	for idx, series := range allSeries {
+		if len(series) == 0 {
+			continue
+		}
+
 		timestamps := make([]int64, len(series))
 		values := make([]float64, len(series))
 
@@ -78,11 +80,11 @@ func (sub *Subscription) getInitialData(
 			values[i] = s.Value
 		}
 
-		result.Series[idx] = messages.Series{
+		result.Series = append(result.Series, messages.Series{
 			Pos:        idx,
 			Timestamps: timestamps,
 			Values:     values,
-		}
+		})
 	}
 
 	return result, nil
@@ -142,6 +144,9 @@ func (sub *Subscription) produceAllSeries(
 			for _, idx := range out {
 				op := sub.operators[idx]
 				series := op.ProcessNewValues(msg.Values, now)
+				if len(series) == 0 {
+					continue
+				}
 
 				timestamps := make([]int64, len(series))
 				values := make([]float64, len(series))

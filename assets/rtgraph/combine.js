@@ -13,7 +13,7 @@ export class Cache {
         return row;
     }
     interleave(data) {
-        if (data.length === 0 || data[0].Timestamps.length === 0) {
+        if (data.length === 0) {
             return;
         }
         const flat = this.flattenAndAddGaps(data);
@@ -46,10 +46,21 @@ export class Cache {
         }
     }
     append(data) {
+        if (this.data.length == 0) {
+            this.interleave(data);
+        }
+        else {
+            this.appendInternal(data);
+        }
+    }
+    appendInternal(data) {
         const flat = this.flattenAndAddGaps(data);
         flat.forEach(col => {
             this.appendSingle(col);
         });
+    }
+    getData() {
+        return this.data;
     }
     flattenAndAddGaps(data) {
         let flat = [];

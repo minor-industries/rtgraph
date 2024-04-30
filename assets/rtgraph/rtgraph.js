@@ -21,7 +21,7 @@ export class Graph {
         }
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize;
-        this.g = null;
+        this.dygraph = null;
         this.data = [];
         this.t0Server = undefined;
         this.t0Client = undefined;
@@ -49,24 +49,17 @@ export class Graph {
         return this.data.length > 0 ? this.opts.labels : [];
     }
     // TODO: get data schema for newRows
-    update(newRows) {
+    update(series) {
+        if (series.length == 0) {
+            return;
+        }
         const newGraph = this.data.length === 0;
         if (this.opts.reorderData === true) {
-            this.data.push(...newRows);
-            // TODO: can probably do better here with binary search and array splice
-            this.data.sort((a, b) => {
-                return a[0] - b[0];
-            });
+            throw new Error("not implemented"); // TODO
         }
         else {
-            if (this.data.length === 0) {
-                this.cache.interleave(newRows);
-                this.data = this.cache.data;
-            }
-            else {
-                this.cache.append(newRows);
-                this.data = this.cache.data;
-            }
+            this.cache.append(series);
+            this.data = this.cache.getData();
         }
         if (newGraph) {
             let labels = this.computeLabels();
@@ -87,7 +80,7 @@ export class Graph {
             if (this.disableInteraction()) {
                 opts.interactionModel = {};
             }
-            this.g = new Dygraph(this.elem, this.data, opts);
+            this.dygraph = new Dygraph(this.elem, this.data, opts);
         }
         else {
             let updateOpts = {
@@ -95,14 +88,16 @@ export class Graph {
                 labels: this.computeLabels()
             };
             // update the title if needed
-            if (newRows.length > 0) {
-                let lastRow = newRows[newRows.length - 1];
-                const lastValue = lastRow[1]; // for now use the first Y value
-                if (lastValue !== null && lastValue !== undefined) {
+            for (let i = 0; i < series.length; i++) {
+                const s = series[i];
+                if (s.Pos === 0) {
+                    // for now use the first Y value
+                    const lastValue = s.Values[s.Values.length - 1];
                     updateOpts.title = supplant(this.opts.title, { value: lastValue.toFixed(2) });
+                    break;
                 }
             }
-            this.g.updateOptions(updateOpts);
+            this.dygraph.updateOptions(updateOpts);
         }
     }
     setDate(date) {
@@ -118,10 +113,10 @@ export class Graph {
             return;
         }
         setInterval(() => {
-            if (this.g === undefined) {
+            if (this.dygraph === null) {
                 return;
             }
-            this.g.updateOptions({
+            this.dygraph.updateOptions({
                 dateWindow: this.computeDateWindow(),
             });
         }, 250);
