@@ -3,86 +3,48 @@ export class Cache {
         this.lastSeen = {};
         this.maxGapMS = maxGapMS;
         this.numSeries = numSeries;
-        this.timestamps = [];
-        this.present = [];
-        this.series = new Array(numSeries);
-        for (let i = 0; i < numSeries; i++) {
-            this.series[i] = [];
-        }
+        this.data = [];
     }
 
     interleave(data) {
         const flat = this.flattenAndAddGaps(data);
         const merged = consolidate(flat);
 
-        merged.forEach(row => {
-            const col0 = row[0];
-            this.timestamps.push(col0.timestamp);
-            const idx = this.timestamps.length - 1;
-
-            for (let i = 0; i < this.numSeries; i++) {
-                this.series[i].push(0.0);
-            }
-
-            let present = 0;
-
-            row.forEach(col => {
-                present |= (1 << col.pos)
-                this.series[col.pos][idx] = col.value;
-            })
-
-            this.present.push(present);
-        })
-
-
-        return this.renderResult(0);
-    }
-
-    renderResult(start) {
-        const result = [];
-        for (let i = start; i < this.timestamps.length; i++) {
+        merged.forEach(r => {
+            const col0 = r[0];
             const row = new Array(this.numSeries + 1);
             row.fill(null, 1);
-            row[0] = new Date(this.timestamps[i]);
-            const present = this.present[i];
+            row[0] = new Date(col0.timestamp);
 
-            for (let j = 0; j < this.numSeries; j++) {
-                const has = present & (1 << j)
-                if (has !== 0) {
-                    row[j + 1] = this.series[j][i];
-                }
-            }
+            r.forEach(col => {
+                row[col.pos + 1] = col.value;
+            })
 
-            result.push(row);
-        }
-
-        return result;
+            this.data.push(row);
+        })
     }
 
     appendSingle(sample) {
-        let idx = this.timestamps.length - 1;
-        const maxTimestamp = this.timestamps[idx];
+        let idx = this.data.length - 1;
+        const maxTimestamp = this.data[idx][0].getTime();
 
         if (sample.timestamp < maxTimestamp) {
+            console.log("ignore", sample);
             // for now ignore out-of-order timestamps;
         } else if (sample.timestamp === maxTimestamp) {
-            this.present[idx] |= (1 << sample.pos);
-            // console.log(this.present[idx]);
-            this.series[sample.pos][idx] = sample.value;
+            this.data[idx][sample.pos + 1] = sample.value;
+            console.log("set", sample, this.data[idx]);
         } else {
-            idx++;
-            this.timestamps.push(sample.timestamp)
-            this.present.push((1 << sample.pos))
-            for (let i = 0; i < this.numSeries; i++) {
-                this.series[i].push(0.0);
-            }
-            this.series[sample.pos][idx] = sample.value;
+            const row = new Array(this.numSeries + 1);
+            row.fill(null, 1);
+            row[0] = new Date(sample.timestamp);
+            row[sample.pos + 1] = sample.value;
+            console.log("append", sample, row);
+            this.data.push(row);
         }
     }
 
     append(data) {
-        const idx = this.timestamps.length - 1;
-
         const flat = this.flattenAndAddGaps(data);
         const merged = consolidate(flat);
 
@@ -91,8 +53,6 @@ export class Cache {
                 this.appendSingle(col);
             })
         })
-
-        return this.renderResult(idx + 1);
     }
 
     flattenAndAddGaps(data) {

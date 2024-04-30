@@ -15,15 +15,16 @@ describe('interleave', function () {
 
     it('should interleave', function () {
         const rendered = interleave(data, maxGapMS);
-        // console.log(JSON.stringify(rendered, null, 2));
 
         const cache = new Cache(4, maxGapMS);
-        const rendered2 = cache.interleave(data);
-        // console.log(JSON.stringify(rendered2, null, 2));
+        cache.interleave(data);
+        const rendered2 = cache.data;
 
         expect(rendered2).to.deep.equal(rendered);
 
-        const newRows = cache.append(append);
+
+        cache.append(append);
+        const newRows = cache.data.slice(-5);
         console.log(JSON.stringify(newRows, null, 2));
     });
 });
