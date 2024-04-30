@@ -1,5 +1,5 @@
 // @ts-ignore
-import {Cache, interleave} from "./interleave.js"
+import {Cache} from "./interleave.js"
 import {row} from "./combine.js"
 
 declare class Dygraph {

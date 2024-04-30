@@ -1,5 +1,5 @@
 // const interleave = require('./interleave');
-import {Cache, interleave} from "./interleave.js";
+import {Cache} from "./interleave.js";
 import data from './data.json' assert {type: 'json'};
 import {expect} from 'chai';
 import * as serializer from 'serialize-javascript'
@@ -12,7 +12,7 @@ const append = [
     {"Pos": 3, "Timestamps": [1714431889528], "Values": [0.5]}
 ]
 
-describe('interleave', function () {
+describe('cache', function () {
     const maxGapMS = 1600;
 
     it('should interleave', function () {

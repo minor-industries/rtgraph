@@ -56,23 +56,18 @@ export class Cache {
         let flat = [];
 
         data.forEach(series => {
-            //TODO: add gaps to each series independently? or not?
-
             for (let i = 0; i < series.Timestamps.length; i++) {
                 const timestamp = series.Timestamps[i];
                 const value = series.Values[i];
 
                 const last = this.lastSeen[series.Pos]
                 this.lastSeen[series.Pos] = timestamp;
-
-                if (last !== undefined) {
-                    if (timestamp - last > this.maxGapMS) {
-                        flat.push({
-                            timestamp: timestamp - 1,
-                            pos: series.Pos,
-                            value: NaN,
-                        })
-                    }
+                if (last !== undefined && timestamp - last > this.maxGapMS) {
+                    flat.push({
+                        timestamp: timestamp - 1,
+                        pos: series.Pos,
+                        value: NaN,
+                    })
                 }
 
                 flat.push({
@@ -90,7 +85,6 @@ export class Cache {
         return flat;
     }
 }
-
 
 function consolidate(allPoints) {
     let result = []
@@ -110,63 +104,4 @@ function consolidate(allPoints) {
     }
 
     return result;
-}
-
-function render(numSeries, merged) {
-    let result = []
-
-    merged.forEach(r => {
-        const row = new Array(numSeries + 1);
-        row.fill(null, 1);
-        row[0] = new Date(r[0].timestamp);
-
-        r.forEach(c => {
-            row[c.pos + 1] = c.value;
-        })
-
-        result.push(row);
-    })
-
-    return result;
-}
-
-
-export function interleave(data, maxTimestampMS) {
-    const numSeries = data.length;
-    const allPoints = [];
-    const lastSeen = {};
-
-    data.forEach(series => {
-        for (let i = 0; i < series.Timestamps.length; i++) {
-            const timestamp = series.Timestamps[i];
-            const value = series.Values[i];
-
-            const last = lastSeen[series.Pos]
-            lastSeen[series.Pos] = timestamp;
-
-            if (last !== undefined) {
-                if (timestamp - last > maxTimestampMS) {
-                    allPoints.push({
-                        timestamp: timestamp - 1,
-                        pos: series.Pos,
-                        value: NaN,
-                    })
-                }
-            }
-
-            allPoints.push({
-                timestamp: timestamp,
-                pos: series.Pos,
-                value: value,
-            })
-        }
-    })
-
-    allPoints.sort((a, b) => {
-        return a.timestamp - b.timestamp;
-    })
-
-    const merged = consolidate(allPoints);
-    const rendered = render(numSeries, merged);
-    return rendered;
 }
