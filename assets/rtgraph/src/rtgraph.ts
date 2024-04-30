@@ -92,11 +92,11 @@ export class Graph {
         return new Dygraph(this.elem, [dummyRow], opts);
     }
 
-    disableInteraction() {
+    private disableInteraction() {
         return isTouchDevice();
     }
 
-    computeDateWindow(): [Date, Date] | undefined {
+    private computeDateWindow(): [Date, Date] | undefined {
         if (this.windowSize === undefined || this.windowSize === null) {
             return undefined;
         }
@@ -146,7 +146,13 @@ export class Graph {
         this.dygraph.updateOptions(updateOpts);
     }
 
-    setDate(date: Date) {
+    setDateWindow(window: [Date, Date]) {
+        this.dygraph.updateOptions({
+            dateWindow: window,
+        });
+    }
+
+    private setDate(date: Date) {
         const firstSet = this.t0Server === undefined;
 
         this.t0Server = date;
@@ -157,7 +163,7 @@ export class Graph {
         }
     }
 
-    scroll() {
+    private scroll() {
         if (this.opts.disableScroll) {
             return;
         }
@@ -172,7 +178,7 @@ export class Graph {
         }, 250);
     }
 
-    getLastTimestamp() {
+    private getLastTimestamp() {
         const data = this.cache.getData();
         if (data.length === 0) {
             return undefined;
@@ -181,7 +187,7 @@ export class Graph {
         return lastPoint[0].getTime();
     }
 
-    connect() {
+    private connect() {
         const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
@@ -230,7 +236,7 @@ export class Graph {
         }
     }
 
-    reconnect() {
+    private reconnect() {
         setTimeout(() => this.connect(), 1000);
     }
 }

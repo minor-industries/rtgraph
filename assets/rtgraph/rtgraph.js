@@ -72,7 +72,6 @@ export class Graph {
         return [t0, t1];
     }
     ;
-    // TODO: get data schema for newRows
     update(series) {
         if (series.length == 0) {
             return;
@@ -98,6 +97,11 @@ export class Graph {
             }
         }
         this.dygraph.updateOptions(updateOpts);
+    }
+    setDateWindow(window) {
+        this.dygraph.updateOptions({
+            dateWindow: window,
+        });
     }
     setDate(date) {
         const firstSet = this.t0Server === undefined;
