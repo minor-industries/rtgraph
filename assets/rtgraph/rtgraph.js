@@ -16,16 +16,40 @@ export class Graph {
         this.elem = elem;
         this.opts = opts;
         this.cache = new Cache(this.opts.seriesNames.length, (_a = this.opts.maxGapMs) !== null && _a !== void 0 ? _a : 60 * 1000);
-        if (this.opts.labels === undefined || this.opts.labels === null) {
-            throw new Error("labels not given");
+        if (this.opts.labels !== undefined) {
+            throw new Error("labels no longer supported");
         }
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize;
-        this.dygraph = null;
-        this.data = [];
         this.t0Server = undefined;
         this.t0Client = undefined;
+        const labels = ["x"];
+        for (let i = 0; i < this.opts.seriesNames.length; i++) {
+            labels.push(`y${i + 1}`);
+        }
+        this.labels = labels;
+        this.dygraph = this.makeGraph();
         this.connect();
+    }
+    makeGraph() {
+        let opts = {
+            // dateWindow: [t0, t1],
+            title: supplant(this.opts.title, { value: "" }), // TODO: do better here
+            ylabel: this.opts.ylabel,
+            labels: ["x"],
+            includeZero: this.opts.includeZero,
+            strokeWidth: this.opts.strokeWidth,
+            dateWindow: this.computeDateWindow(),
+            height: this.opts.height,
+            rightGap: 5,
+            connectSeparatedPoints: true,
+            valueRange: this.opts.valueRange,
+            series: this.opts.series,
+        };
+        if (this.disableInteraction()) {
+            opts.interactionModel = {};
+        }
+        return new Dygraph(this.elem, [], opts);
     }
     disableInteraction() {
         return isTouchDevice();
@@ -34,71 +58,45 @@ export class Graph {
         if (this.windowSize === undefined || this.windowSize === null) {
             return undefined;
         }
-        // TODO: perhaps we need to raise an error here instead
-        if (this.t0Client === undefined || this.t0Server === undefined) {
-            return undefined;
-        }
         const t1Client = new Date();
+        if (this.t0Client === undefined || this.t0Server === undefined) {
+            return [
+                new Date(t1Client.getTime() - this.windowSize),
+                t1Client
+            ];
+        }
         const dt = t1Client.getTime() - this.t0Client.getTime();
         const t1 = new Date(this.t0Server.getTime() + dt);
         const t0 = new Date(t1.getTime() - this.windowSize);
         return [t0, t1];
     }
     ;
-    computeLabels() {
-        return this.data.length > 0 ? this.opts.labels : [];
-    }
     // TODO: get data schema for newRows
     update(series) {
         if (series.length == 0) {
             return;
         }
-        const newGraph = this.data.length === 0;
         if (this.opts.reorderData === true) {
             throw new Error("not implemented"); // TODO
         }
         else {
             this.cache.append(series);
-            this.data = this.cache.getData();
         }
-        if (newGraph) {
-            let labels = this.computeLabels();
-            let opts = {
-                // dateWindow: [t0, t1],
-                title: supplant(this.opts.title, { value: "" }), // TODO: do better here
-                ylabel: this.opts.ylabel,
-                labels: labels,
-                includeZero: this.opts.includeZero,
-                strokeWidth: this.opts.strokeWidth,
-                dateWindow: this.computeDateWindow(),
-                height: this.opts.height,
-                rightGap: 5,
-                connectSeparatedPoints: true,
-                valueRange: this.opts.valueRange,
-                series: this.opts.series,
-            };
-            if (this.disableInteraction()) {
-                opts.interactionModel = {};
+        let updateOpts = {
+            file: this.cache.getData(),
+            labels: this.labels
+        };
+        // update the title if needed
+        for (let i = 0; i < series.length; i++) {
+            const s = series[i];
+            if (s.Pos === 0) {
+                // for now use the first Y value
+                const lastValue = s.Values[s.Values.length - 1];
+                updateOpts.title = supplant(this.opts.title, { value: lastValue.toFixed(2) });
+                break;
             }
-            this.dygraph = new Dygraph(this.elem, this.data, opts);
         }
-        else {
-            let updateOpts = {
-                file: this.data,
-                labels: this.computeLabels()
-            };
-            // update the title if needed
-            for (let i = 0; i < series.length; i++) {
-                const s = series[i];
-                if (s.Pos === 0) {
-                    // for now use the first Y value
-                    const lastValue = s.Values[s.Values.length - 1];
-                    updateOpts.title = supplant(this.opts.title, { value: lastValue.toFixed(2) });
-                    break;
-                }
-            }
-            this.dygraph.updateOptions(updateOpts);
-        }
+        this.dygraph.updateOptions(updateOpts);
     }
     setDate(date) {
         const firstSet = this.t0Server === undefined;
@@ -121,11 +119,12 @@ export class Graph {
             });
         }, 250);
     }
-    getLastPoint() {
-        if (this.data.length === 0) {
+    getLastTimestamp() {
+        const data = this.cache.getData();
+        if (data.length === 0) {
             return undefined;
         }
-        const lastPoint = this.data[this.data.length - 1];
+        const lastPoint = data[data.length - 1];
         return lastPoint[0].getTime();
     }
     connect() {
@@ -151,7 +150,7 @@ export class Graph {
         };
         ws.onopen = event => {
             setTimeout(() => {
-                let lastPointMs = this.getLastPoint();
+                let lastPointMs = this.getLastTimestamp();
                 ws.send(JSON.stringify({
                     series: this.opts.seriesNames,
                     windowSize: this.windowSize || 0,
