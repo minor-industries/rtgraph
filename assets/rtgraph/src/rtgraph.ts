@@ -116,7 +116,6 @@ export class Graph {
         return [t0, t1]
     };
 
-    // TODO: get data schema for newRows
     update(series: Series[]) {
         if (series.length == 0) {
             return;
