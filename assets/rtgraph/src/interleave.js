@@ -6,21 +6,27 @@ export class Cache {
         this.data = [];
     }
 
+    newRow(timestamp) {
+        const row = new Array(this.numSeries + 1);
+        row.fill(null, 1);
+        row[0] = new Date(timestamp);
+        this.data.push(row)
+        return row
+    }
+
     interleave(data) {
+        if (data.length === 0) {
+            return;
+        }
+
         const flat = this.flattenAndAddGaps(data);
-        const merged = consolidate(flat);
 
-        merged.forEach(r => {
-            const col0 = r[0];
-            const row = new Array(this.numSeries + 1);
-            row.fill(null, 1);
-            row[0] = new Date(col0.timestamp);
-
-            r.forEach(col => {
-                row[col.pos + 1] = col.value;
-            })
-
-            this.data.push(row);
+        let row = this.newRow(flat[0].timestamp)
+        flat.forEach(col => {
+            if (row[0].getTime() !== col.timestamp) {
+                row = this.newRow(col.timestamp)
+            }
+            row[col.pos + 1] = col.value;
         })
     }
 
@@ -34,22 +40,15 @@ export class Cache {
         } else if (sample.timestamp === maxTimestamp) {
             this.data[idx][sample.pos + 1] = sample.value;
         } else {
-            const row = new Array(this.numSeries + 1);
-            row.fill(null, 1);
-            row[0] = new Date(sample.timestamp);
+            const row = this.newRow(sample.timestamp)
             row[sample.pos + 1] = sample.value;
-            this.data.push(row);
         }
     }
 
     append(data) {
         const flat = this.flattenAndAddGaps(data);
-        const merged = consolidate(flat);
-
-        merged.forEach(row => {
-            row.forEach(col => {
-                this.appendSingle(col);
-            })
+        flat.forEach(col => {
+            this.appendSingle(col);
         })
     }
 
@@ -85,24 +84,4 @@ export class Cache {
 
         return flat;
     }
-}
-
-function consolidate(allPoints) {
-    let result = []
-    let acc = [];
-
-    allPoints.forEach(point => {
-        if (acc.length === 0 || acc[0].timestamp === point.timestamp) {
-            acc.push(point);
-        } else {
-            result.push(acc);
-            acc = [point];
-        }
-    });
-
-    if (acc.length > 0) {
-        result.push(acc);
-    }
-
-    return result;
 }
