@@ -28,7 +28,7 @@ export class Cache {
     }
 
     interleave(data: Series[]) {
-        if (data.length === 0) {
+        if (data.length === 0 || data[0].Timestamps.length === 0) {
             return;
         }
 

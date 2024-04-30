@@ -13,7 +13,7 @@ export class Cache {
         return row;
     }
     interleave(data) {
-        if (data.length === 0) {
+        if (data.length === 0 || data[0].Timestamps.length === 0) {
             return;
         }
         const flat = this.flattenAndAddGaps(data);
