@@ -18,14 +18,6 @@ import (
 func (g *Graph) setupServer() error {
 	r := g.server
 
-	r.GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusMovedPermanently, "/index.html")
-	})
-
-	r.GET("/favicon.ico", func(c *gin.Context) {
-		c.Status(204)
-	})
-
 	g.StaticFiles(assets.FS,
 		"rtgraph/dygraph.min.js", "application/javascript",
 		"rtgraph/dygraph.min.js.map", "application/javascript",
