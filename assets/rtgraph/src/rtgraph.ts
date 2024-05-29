@@ -31,7 +31,7 @@ export class Graph {
     private readonly opts: { [p: string]: any };
     private readonly numSeries: number;
     private readonly windowSize: number;
-    private readonly dygraph: Dygraph;
+    dygraph: Dygraph;
     private readonly cache: Cache;
     private readonly labels: string[];
     private t0Server: Date | undefined;
