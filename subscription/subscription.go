@@ -164,6 +164,10 @@ func (sub *Subscription) produceAllSeries(
 			}
 		}
 
+		if len(data.Series) == 0 {
+			continue
+		}
+
 		outMsg <- data
 	}
 }
