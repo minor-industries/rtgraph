@@ -8,11 +8,81 @@ import (
 )
 
 type Parser struct {
+	functions map[string]FunctionParser
+}
+
+var builtInParsers = map[string]FunctionParser{
+	"avg": func(start time.Time, args []string) (Operator, error) {
+		duration, err := time.ParseDuration(args[0])
+		if err != nil {
+			return nil, errors.Wrap(err, "parse duration")
+		}
+		switch len(args) {
+		case 1:
+			return NewComputedSeries(&FcnAvg{}, duration, start), nil
+		case 2:
+			switch args[1] {
+			case "triangle":
+				return NewComputedSeries(&FcnAvgWindow{
+					duration: duration,
+					scale:    1.0 / float64(duration),
+				}, duration, start), nil
+			}
+			return nil, errors.New("unknown window")
+		default:
+			return nil, errors.New("avg: invalid number of function parameters")
+		}
+	},
+
+	"gt": func(start time.Time, args []string) (Operator, error) {
+		x, err := strconv.ParseFloat(args[0], 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid float")
+		}
+		return OpGt{X: x}, nil
+	},
+
+	"add": func(start time.Time, args []string) (Operator, error) {
+		x, err := strconv.ParseFloat(args[0], 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid float")
+		}
+		return OpAdd{X: x}, nil
+	},
+
+	"CtoF": func(start time.Time, args []string) (Operator, error) {
+		return OpCtoF{}, nil
+	},
+
+	"gate": func(start time.Time, args []string) (Operator, error) {
+		if len(args) != 2 {
+			return nil, errors.New("gate: invalid number of function parameters")
+		}
+		duration, err := time.ParseDuration(args[0])
+		if err != nil {
+			return nil, errors.Wrap(err, "parse duration")
+		}
+		target, err := strconv.ParseFloat(args[1], 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "invalid float")
+		}
+		return NewComputedSeries(&FcnGate{
+			target: target,
+		}, duration, start), nil
+	},
 }
 
 func NewParser() *Parser {
-	return &Parser{}
+	return &Parser{
+		functions: builtInParsers,
+	}
 }
+
+func (p *Parser) AddFunction(name string, parser FunctionParser) {
+	p.functions[name] = parser
+}
+
+type FunctionParser func(start time.Time, args []string) (Operator, error)
 
 func trimSpace(parts []string) []string {
 	for i, part := range parts {
@@ -56,66 +126,19 @@ func (p *Parser) parseFunction(
 	start time.Time,
 	def string,
 ) (Operator, error) {
-	functionParts := trimSpace(strings.Fields(def))
+	fields := trimSpace(strings.Fields(def))
 
-	if len(functionParts) == 0 {
+	if len(fields) == 0 {
 		return nil, errors.New("invalid number of function parameters")
 	}
 
-	functionName := functionParts[0]
-	switch functionName {
-	case "avg":
-		duration, err := time.ParseDuration(functionParts[1])
-		if err != nil {
-			return nil, errors.Wrap(err, "parse duration")
-		}
-		switch len(functionParts) {
-		case 2:
-			return NewComputedSeries(&FcnAvg{}, duration, start), nil
-		case 3:
-			switch functionParts[2] {
-			case "triangle":
-				return NewComputedSeries(&FcnAvgWindow{
-					duration: duration,
-					scale:    1.0 / float64(duration),
-				}, duration, start), nil
-			}
-			return nil, errors.New("unknown window")
-		default:
-			return nil, errors.New("avg: invalid number of function parameters")
-		}
-	case "gt":
-		x, err := strconv.ParseFloat(functionParts[1], 64)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid float")
-		}
-		return OpGt{X: x}, nil
-	case "add":
-		x, err := strconv.ParseFloat(functionParts[1], 64)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid float")
-		}
-		return OpAdd{X: x}, nil
-	case "CtoF":
-		return OpCtoF{}, nil
-	case "gate":
-		if len(functionParts) != 3 {
-			return nil, errors.New("gate: invalid number of function parameters")
-		}
-		duration, err := time.ParseDuration(functionParts[1])
-		if err != nil {
-			return nil, errors.Wrap(err, "parse duration")
-		}
-		target, err := strconv.ParseFloat(functionParts[2], 64)
-		if err != nil {
-			return nil, errors.Wrap(err, "invalid float")
-		}
-		return NewComputedSeries(&FcnGate{
-			target: target,
-		}, duration, start), nil
-	default:
+	functionName := fields[0]
+	parser, ok := p.functions[functionName]
+	if !ok {
 		return nil, errors.New("unknown function name")
 	}
+
+	return parser(start, fields[1:])
 }
 
 func (p *Parser) parseChain(
@@ -132,5 +155,5 @@ func (p *Parser) parseChain(
 		ops = append(ops, op)
 	}
 
-	return chain{ops: ops}, nil
+	return Chain{ops: ops}, nil
 }
