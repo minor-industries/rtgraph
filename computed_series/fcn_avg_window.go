@@ -17,7 +17,7 @@ func (f *FcnAvgWindow) AddValue(v schema.Value) {
 func (f *FcnAvgWindow) RemoveValue(v schema.Value) {
 }
 
-func (f *FcnAvgWindow) Compute(values *deque.Deque[schema.Value], _ time.Time) (float64, bool) {
+func (f *FcnAvgWindow) Compute(values *deque.Deque[schema.Value]) (float64, bool) {
 	count := 0.0
 	sum := 0.0
 

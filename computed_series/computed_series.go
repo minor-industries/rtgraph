@@ -66,7 +66,7 @@ func (cs *ComputedSeries) ProcessNewValues(
 			continue
 		}
 
-		newValue, ok := cs.fcn.Compute(cs.values, now)
+		newValue, ok := cs.fcn.Compute(cs.values)
 		if !ok {
 			continue
 		}

@@ -3,7 +3,6 @@ package computed_series
 import (
 	"github.com/gammazero/deque"
 	"github.com/minor-industries/rtgraph/schema"
-	"time"
 )
 
 type FcnGate struct {
@@ -15,7 +14,7 @@ func (f *FcnGate) AddValue(v schema.Value) {}
 
 func (f *FcnGate) RemoveValue(v schema.Value) {}
 
-func (f *FcnGate) Compute(values *deque.Deque[schema.Value], now time.Time) (float64, bool) {
+func (f *FcnGate) Compute(values *deque.Deque[schema.Value]) (float64, bool) {
 	sz := values.Len()
 	if sz == 0 {
 		return 0, false
