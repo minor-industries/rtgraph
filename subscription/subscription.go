@@ -2,7 +2,7 @@ package subscription
 
 import (
 	"github.com/minor-industries/rtgraph/broker"
-	computed_series2 "github.com/minor-industries/rtgraph/computed_series"
+	"github.com/minor-industries/rtgraph/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
@@ -15,7 +15,7 @@ type Subscription struct {
 	lastSeen    map[int]time.Time // for each position
 	maxGap      time.Duration
 	inputSeries []string
-	operators   []computed_series2.Operator
+	operators   []computed_series.Operator
 }
 
 func NewSubscription(
@@ -25,12 +25,12 @@ func NewSubscription(
 	sub := &Subscription{
 		lastSeen:    map[int]time.Time{},
 		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
-		operators:   make([]computed_series2.Operator, len(req.Series)),
+		operators:   make([]computed_series.Operator, len(req.Series)),
 		inputSeries: make([]string, len(req.Series)),
 	}
 
 	for idx, sn := range req.Series {
-		inputSeriesName, op, err := computed_series2.Parse(sn, start)
+		inputSeriesName, op, err := computed_series.Parse(sn, start)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse series")
 		}
@@ -49,7 +49,7 @@ func (sub *Subscription) getInitialData(
 	allSeries := make([][]schema.Value, len(sub.operators))
 	for idx, op := range sub.operators {
 		var lookback time.Duration = 0
-		if wo, ok := op.(computed_series2.WindowedOperator); ok {
+		if wo, ok := op.(computed_series.WindowedOperator); ok {
 			lookback = wo.Lookback()
 		}
 
