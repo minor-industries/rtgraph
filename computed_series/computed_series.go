@@ -53,7 +53,6 @@ func (cs *ComputedSeries) removeOld(now time.Time) {
 
 func (cs *ComputedSeries) ProcessNewValues(
 	values []schema.Value,
-	now time.Time,
 ) []schema.Value {
 	result := make([]schema.Value, 0, len(values))
 

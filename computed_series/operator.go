@@ -6,7 +6,7 @@ import (
 )
 
 type Operator interface {
-	ProcessNewValues(values []schema.Value, now time.Time) []schema.Value
+	ProcessNewValues(values []schema.Value) []schema.Value
 }
 
 type WindowedOperator interface {
@@ -15,6 +15,6 @@ type WindowedOperator interface {
 
 type Identity struct{}
 
-func (i Identity) ProcessNewValues(values []schema.Value, now time.Time) []schema.Value {
+func (i Identity) ProcessNewValues(values []schema.Value) []schema.Value {
 	return values
 }

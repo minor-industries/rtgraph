@@ -61,7 +61,7 @@ func (sub *Subscription) getInitialData(
 			return nil, errors.Wrap(err, "load original window")
 		}
 
-		series := op.ProcessNewValues(window.Values, now)
+		series := op.ProcessNewValues(window.Values)
 		allSeries[idx] = series
 	}
 
@@ -143,7 +143,7 @@ func (sub *Subscription) produceAllSeries(
 		if out, ok := computedMap[msg.SeriesName]; ok {
 			for _, idx := range out {
 				op := sub.operators[idx]
-				series := op.ProcessNewValues(msg.Values, now)
+				series := op.ProcessNewValues(msg.Values)
 				if len(series) == 0 {
 					continue
 				}
