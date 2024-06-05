@@ -44,7 +44,6 @@ func NewSubscription(
 func (sub *Subscription) getInitialData(
 	db storage.StorageBackend,
 	start time.Time,
-	now time.Time,
 ) (*messages.Data, error) {
 	allSeries := make([][]schema.Value, len(sub.operators))
 	for idx, op := range sub.operators {
@@ -110,7 +109,7 @@ func (sub *Subscription) Run(
 		Now: uint64(now.UnixMilli()),
 	}
 
-	initialData, err := sub.getInitialData(db, start, now)
+	initialData, err := sub.getInitialData(db, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
@@ -119,13 +118,12 @@ func (sub *Subscription) Run(
 	}
 	msgCh <- initialData
 
-	sub.produceAllSeries(broker, msgCh, now)
+	sub.produceAllSeries(broker, msgCh)
 }
 
 func (sub *Subscription) produceAllSeries(
 	broker *broker.Broker,
 	outMsg chan *messages.Data,
-	now time.Time,
 ) {
 	msgCh := broker.Subscribe()
 	defer broker.Unsubscribe(msgCh)
