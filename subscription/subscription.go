@@ -30,7 +30,7 @@ func NewSubscription(
 	}
 
 	for idx, sn := range req.Series {
-		inputSeriesName, op, err := computed_series.Parse(sn, start)
+		inputSeriesName, op, err := computed_series.NewParser().Parse(sn, start)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse series")
 		}
