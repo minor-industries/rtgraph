@@ -7,7 +7,7 @@ import (
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
-	subscription2 "github.com/minor-industries/rtgraph/subscription"
+	subscription "github.com/minor-industries/rtgraph/subscription"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -87,13 +87,13 @@ func (g *Graph) CreateValue(
 }
 
 func (g *Graph) Subscribe(
-	req *subscription2.Request,
+	req *subscription.Request,
 	now time.Time,
 	msgCh chan *messages.Data,
 ) {
 	start := req.Start(now)
 
-	sub, err := subscription2.NewSubscription(req, start)
+	sub, err := subscription.NewSubscription(req, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),
