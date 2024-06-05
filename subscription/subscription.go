@@ -19,6 +19,7 @@ type Subscription struct {
 }
 
 func NewSubscription(
+	parser *computed_series.Parser,
 	req *Request,
 	start time.Time,
 ) (*Subscription, error) {
@@ -30,7 +31,7 @@ func NewSubscription(
 	}
 
 	for idx, sn := range req.Series {
-		inputSeriesName, op, err := computed_series.NewParser().Parse(sn, start)
+		inputSeriesName, op, err := parser.Parse(sn, start)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse series")
 		}

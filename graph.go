@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
+	"github.com/minor-industries/rtgraph/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
@@ -19,6 +20,7 @@ type Graph struct {
 	broker *broker.Broker
 	server *gin.Engine
 	db     storage.StorageBackend
+	Parser *computed_series.Parser
 }
 
 type Opts struct {
@@ -48,6 +50,7 @@ func New(
 		db:     backend,
 		errCh:  errCh,
 		server: server,
+		Parser: computed_series.NewParser(),
 	}
 
 	if err := g.setupServer(); err != nil {
@@ -93,7 +96,7 @@ func (g *Graph) Subscribe(
 ) {
 	start := req.Start(now)
 
-	sub, err := subscription.NewSubscription(req, start)
+	sub, err := subscription.NewSubscription(g.Parser, req, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "new subscription").Error(),
