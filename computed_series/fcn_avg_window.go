@@ -25,7 +25,6 @@ func (f *FcnAvgWindow) Compute(values *deque.Deque[schema.Value]) (float64, bool
 		return 0, false
 	}
 
-	// TODO: reconsider: should we use now from the values we have, or the "current" now?
 	now := values.Back().Timestamp
 	tStart := now.Add(-f.duration)
 
@@ -35,13 +34,9 @@ func (f *FcnAvgWindow) Compute(values *deque.Deque[schema.Value]) (float64, bool
 		dt := v.Timestamp.Sub(tStart)
 		w := float64(dt) * f.scale
 
-		//fmt.Println(i, dt, w)
-
 		sum += v.Value * w
 		count += w
 	}
-
-	//fmt.Println("")
 
 	if count == 0 {
 		return 0, false
