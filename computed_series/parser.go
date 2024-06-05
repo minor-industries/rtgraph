@@ -90,6 +90,21 @@ func parseFunction(
 		return series, OpAdd{X: x}, nil
 	case "CtoF":
 		return series, OpCtoF{}, nil
+	case "gate":
+		if len(functionParts) != 3 {
+			return "", nil, errors.New("gate: invalid number of function parameters")
+		}
+		duration, err := time.ParseDuration(functionParts[1])
+		if err != nil {
+			return "", nil, errors.Wrap(err, "parse duration")
+		}
+		target, err := strconv.ParseFloat(functionParts[2], 64)
+		if err != nil {
+			return "", nil, errors.Wrap(err, "invalid float")
+		}
+		return series, NewComputedSeries(&FcnGate{
+			target: target,
+		}, duration, start), nil
 	default:
 		return "", nil, errors.New("unknown function name")
 	}
