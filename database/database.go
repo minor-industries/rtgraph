@@ -68,7 +68,7 @@ func loadSeries(db *gorm.DB) (map[string]*Series, error) {
 type Backend struct {
 	db *gorm.DB
 
-	objects chan any
+	objects chan object
 	errCh   chan error
 }
 
@@ -93,7 +93,7 @@ func NewBackend(
 ) *Backend {
 	b := &Backend{
 		db:      db,
-		objects: make(chan any, bufSize),
+		objects: make(chan object, bufSize),
 		errCh:   errCh,
 	}
 

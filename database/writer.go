@@ -6,16 +6,39 @@ import (
 	"time"
 )
 
-func (b *Backend) Insert(obj any) {
-	b.objects <- obj
+type object struct {
+	obj       any
+	operation string // {insert, save}
 }
 
-func (b *Backend) insert(objects []any) error {
+func (b *Backend) Insert(obj any) {
+	b.objects <- object{
+		obj:       obj,
+		operation: "insert",
+	}
+}
+
+func (b *Backend) Save(obj any) {
+	b.objects <- object{
+		obj:       obj,
+		operation: "save",
+	}
+}
+
+func (b *Backend) insert(objects []object) error {
 	err := b.db.Transaction(func(tx *gorm.DB) error {
 		for _, row := range objects {
-			res := tx.Create(row)
+			var res *gorm.DB
+			switch row.operation {
+			case "insert":
+				res = tx.Create(row.obj)
+			case "save":
+				res = tx.Save(row.obj)
+			default:
+				return errors.New("unknown operation")
+			}
 			if res.Error != nil {
-				return errors.Wrap(res.Error, "create")
+				return errors.Wrap(res.Error, row.operation)
 			}
 		}
 		return nil
@@ -26,7 +49,7 @@ func (b *Backend) insert(objects []any) error {
 func (b *Backend) RunWriter() {
 	ticker := time.NewTicker(100 * time.Millisecond)
 
-	var rows []any
+	var rows []object
 
 	for {
 		select {
