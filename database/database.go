@@ -39,7 +39,7 @@ func RandomID() []byte {
 	return result[:]
 }
 
-func hashedID(s string) []byte {
+func HashedID(s string) []byte {
 	var result [16]byte
 	h := sha256.New()
 	h.Write([]byte(s))
@@ -81,7 +81,7 @@ func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value floa
 		ID:        RandomID(),
 		Timestamp: timestamp,
 		Value:     value,
-		SeriesID:  hashedID(seriesName),
+		SeriesID:  HashedID(seriesName),
 	})
 	return nil
 }
@@ -105,7 +105,7 @@ func NewBackend(
 func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
 	q := b.db.Preload("Series").Where(
 		"series_id = ? and date(timestamp) = ?",
-		hashedID(seriesName),
+		HashedID(seriesName),
 		date,
 	)
 
@@ -115,7 +115,7 @@ func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error
 func (b *Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
 	q := b.db.Preload("Series").Where(
 		"series_id = ? and timestamp >= ?",
-		hashedID(seriesName),
+		HashedID(seriesName),
 		start,
 	)
 
@@ -159,7 +159,7 @@ func (b *Backend) CreateSeries(
 			continue
 		}
 		b.db.Create(&Series{
-			ID:   hashedID(name),
+			ID:   HashedID(name),
 			Name: name,
 			Unit: "",
 		})
