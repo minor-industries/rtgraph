@@ -13,7 +13,6 @@ import (
 type Subscription struct {
 	// TODO: combine inputSeries, operators, lastSeen into struct
 	lastSeen    map[int]time.Time // for each position
-	maxGap      time.Duration
 	inputSeries []string
 	operators   []computed_series.Operator
 }
@@ -25,7 +24,6 @@ func NewSubscription(
 ) (*Subscription, error) {
 	sub := &Subscription{
 		lastSeen:    map[int]time.Time{},
-		maxGap:      time.Millisecond * time.Duration(req.MaxGapMs),
 		operators:   make([]computed_series.Operator, len(req.Series)),
 		inputSeries: make([]string, len(req.Series)),
 	}
@@ -44,19 +42,26 @@ func NewSubscription(
 
 func (sub *Subscription) getInitialData(
 	db storage.StorageBackend,
+	req *Request,
 	start time.Time,
 ) (*messages.Data, error) {
 	allSeries := make([][]schema.Value, len(sub.operators))
 	for idx, op := range sub.operators {
-		var lookback time.Duration = 0
-		if wo, ok := op.(computed_series.WindowedOperator); ok {
-			lookback = wo.Lookback()
-		}
+		var window schema.Series
+		var err error
+		if req.Date != "" {
+			window, err = db.LoadDate(sub.inputSeries[idx], req.Date)
+		} else {
+			var lookback time.Duration = 0
+			if wo, ok := op.(computed_series.WindowedOperator); ok {
+				lookback = wo.Lookback()
+			}
 
-		window, err := db.LoadDataWindow(
-			sub.inputSeries[idx],
-			start.Add(-lookback),
-		)
+			window, err = db.LoadDataWindow(
+				sub.inputSeries[idx],
+				start.Add(-lookback),
+			)
+		}
 		if err != nil {
 			return nil, errors.Wrap(err, "load original window")
 		}
@@ -103,9 +108,10 @@ func (sub *Subscription) Run(
 	db storage.StorageBackend,
 	broker *broker.Broker,
 	msgCh chan *messages.Data,
+	req *Request,
 	start time.Time,
 ) {
-	initialData, err := sub.getInitialData(db, start)
+	initialData, err := sub.getInitialData(db, req, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),

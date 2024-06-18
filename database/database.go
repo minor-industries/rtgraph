@@ -102,37 +102,31 @@ func NewBackend(
 	return b
 }
 
-func (b *Backend) LoadDataWindow(
-	seriesName string,
-	start time.Time,
-) (schema.Series, error) {
-	q1 := b.db.Preload("Series").Where(
+func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
+	q := b.db.Preload("Series").Where(
+		"series_id = ? and date(timestamp) = ?",
+		hashedID(seriesName),
+		date,
+	)
+
+	return b.loadDataWindow(seriesName, q)
+}
+
+func (b *Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
+	q := b.db.Preload("Series").Where(
 		"series_id = ? and timestamp >= ?",
 		hashedID(seriesName),
 		start,
 	)
 
-	return b.loadDataWindow(q1, seriesName)
+	return b.loadDataWindow(seriesName, q)
 }
 
-func (b *Backend) LoadBoundedDataWindow(
-	seriesName string,
-	start time.Time,
-	end time.Time,
-) (schema.Series, error) {
-	q1 := b.db.Preload("Series").Where(
-		"series_id = ? and timestamp >= ? and timestamp < ?",
-		hashedID(seriesName),
-		start,
-		end,
-	)
-
-	return b.loadDataWindow(q1, seriesName)
-}
-
-func (b *Backend) loadDataWindow(q1 *gorm.DB, seriesName string) (schema.Series, error) {
+func (b *Backend) loadDataWindow(seriesName string, query *gorm.DB) (schema.Series, error) {
 	var rows []Value
-	tx := q1.Order("timestamp asc").Find(&rows)
+
+	tx := query.Order("timestamp asc").Find(&rows)
+
 	if tx.Error != nil {
 		return schema.Series{}, errors.Wrap(tx.Error, "find")
 	}

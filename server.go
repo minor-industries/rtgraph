@@ -68,9 +68,9 @@ func (g *Graph) setupServer() error {
 			return
 		}
 
-		now := time.Now()
-
 		msgCh := make(chan *messages.Data)
+
+		now := time.Now()
 
 		go g.Subscribe(&req, now, msgCh)
 

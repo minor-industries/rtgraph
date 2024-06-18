@@ -6,7 +6,7 @@ type Request struct {
 	Series      []string `json:"series"`
 	WindowSize  uint64   `json:"windowSize"`
 	LastPointMs uint64   `json:"lastPointMs"`
-	MaxGapMs    uint64   `json:"maxGapMs"`
+	Date        string   `json:"date"`
 }
 
 func (req *Request) Start(now time.Time) time.Time {

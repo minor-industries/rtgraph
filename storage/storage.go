@@ -11,6 +11,11 @@ type StorageBackend interface {
 		start time.Time,
 	) (schema.Series, error)
 
+	LoadDate(
+		seriesName string,
+		date string,
+	) (schema.Series, error)
+
 	CreateSeries(
 		seriesNames []string,
 	) error

@@ -160,7 +160,8 @@ export class Graph {
                     series: this.opts.seriesNames,
                     windowSize: this.windowSize || 0,
                     lastPointMs: lastPointMs,
-                    maxGapMs: this.opts.maxGapMs || 60 * 1000 // 60 seconds in ms
+                    maxGapMs: this.opts.maxGapMs || 60 * 1000, // 60 seconds in ms
+                    date: this.opts.date
                 }));
             });
         };
