@@ -103,13 +103,8 @@ func (sub *Subscription) Run(
 	db storage.StorageBackend,
 	broker *broker.Broker,
 	msgCh chan *messages.Data,
-	now time.Time,
 	start time.Time,
 ) {
-	msgCh <- &messages.Data{
-		Now: uint64(now.UnixMilli()),
-	}
-
 	initialData, err := sub.getInitialData(db, start)
 	if err != nil {
 		msgCh <- &messages.Data{

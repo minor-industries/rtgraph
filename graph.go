@@ -104,11 +104,14 @@ func (g *Graph) Subscribe(
 		return
 	}
 
+	msgCh <- &messages.Data{
+		Now: uint64(now.UnixMilli()),
+	}
+
 	sub.Run(
 		g.db,
 		g.broker,
 		msgCh,
-		now,
 		start,
 	)
 }

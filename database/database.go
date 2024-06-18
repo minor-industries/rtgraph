@@ -106,13 +106,33 @@ func (b *Backend) LoadDataWindow(
 	seriesName string,
 	start time.Time,
 ) (schema.Series, error) {
-	var rows []Value
-
-	tx := b.db.Preload("Series").Where(
+	q1 := b.db.Preload("Series").Where(
 		"series_id = ? and timestamp >= ?",
 		hashedID(seriesName),
 		start,
-	).Order("timestamp asc").Find(&rows)
+	)
+
+	return b.loadDataWindow(q1, seriesName)
+}
+
+func (b *Backend) LoadBoundedDataWindow(
+	seriesName string,
+	start time.Time,
+	end time.Time,
+) (schema.Series, error) {
+	q1 := b.db.Preload("Series").Where(
+		"series_id = ? and timestamp >= ? and timestamp < ?",
+		hashedID(seriesName),
+		start,
+		end,
+	)
+
+	return b.loadDataWindow(q1, seriesName)
+}
+
+func (b *Backend) loadDataWindow(q1 *gorm.DB, seriesName string) (schema.Series, error) {
+	var rows []Value
+	tx := q1.Order("timestamp asc").Find(&rows)
 	if tx.Error != nil {
 		return schema.Series{}, errors.Wrap(tx.Error, "find")
 	}
