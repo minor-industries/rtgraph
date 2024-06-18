@@ -3,7 +3,6 @@ package database
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"fmt"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
@@ -109,8 +108,6 @@ func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error
 		return schema.Series{}, errors.Wrap(err, "parse date")
 	}
 	t2 := t1.AddDate(0, 0, 1)
-
-	fmt.Println(date, t1, t2)
 
 	q := b.db.Where(
 		"series_id = ? and timestamp >= ? and timestamp < ?",
