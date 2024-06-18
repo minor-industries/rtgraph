@@ -1,12 +1,14 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/database"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
 	"io/fs"
 	"math/rand"
+	"net/http"
 	"os"
 	"syscall"
 	"time"
@@ -44,6 +46,10 @@ func run() error {
 	if err != nil {
 		return errors.Wrap(err, "new graph")
 	}
+
+	graph.GetEngine().GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusTemporaryRedirect, "index.html")
+	})
 
 	graph.StaticFiles(html.FS, "index.html", "text/html")
 

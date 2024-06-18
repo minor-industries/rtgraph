@@ -1,20 +1,9 @@
 package rtgraph
 
 import (
-	"crypto/sha256"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 )
-
-// TODO: we're leaking a database abstraction here
-func hashedID(s string) []byte {
-	var result [16]byte
-	h := sha256.New()
-	h.Write([]byte(s))
-	sum := h.Sum(nil)
-	copy(result[:], sum[:16])
-	return result[:]
-}
 
 func (g *Graph) publishToDB() {
 	msgCh := g.broker.Subscribe()

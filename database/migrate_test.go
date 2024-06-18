@@ -1,40 +1,34 @@
 package database
 
-import (
-	"fmt"
-	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
-	"time"
-)
-
-func TestMigrate(t *testing.T) {
-	errCh := make(chan error)
-
-	db, err := Get(os.ExpandEnv("$HOME/z2.db"), errCh)
-	require.NoError(t, err)
-
-	var rows []Value
-	tx := db.GetORM().Order("timestamp desc").Limit(100).Find(&rows)
-	require.NoError(t, tx.Error)
-
-	location, err := time.LoadLocation("Local")
-	require.NoError(t, err)
-
-	now := time.Now().In(location)
-	zoneName, _ := now.Zone()
-
-	fmt.Println(zoneName)
-
-	for _, row := range rows {
-		ts := row.Timestamp.UnixMilli()
-		t2 := time.UnixMilli(ts)
-
-		loc, err := time.LoadLocation("America/Los_Angeles")
-		require.NoError(t, err)
-
-		t3 := t2.In(loc)
-
-		fmt.Println(row.Timestamp, row.Timestamp.UnixMilli(), t2.UTC(), t3)
-	}
-}
+//func TestMigrate(t *testing.T) {
+//	errCh := make(chan error)
+//
+//	db, err := Get(os.ExpandEnv("$HOME/.z2/z2.db"), errCh)
+//	require.NoError(t, err)
+//
+//	fmt.Println(time.UnixMilli(1717791885643))
+//
+//	for {
+//		var rows []Value
+//		orm := db.GetORM()
+//		tx := orm.Where("timestamp_milli is null").Limit(100).Find(&rows)
+//		require.NoError(t, tx.Error)
+//
+//		fmt.Println(len(rows))
+//		if len(rows) == 0 {
+//			break
+//		}
+//
+//		err = orm.Transaction(func(tx *gorm.DB) error {
+//			for _, row := range rows {
+//				row.TimestampMilli = sql.NullInt64{
+//					Int64: row.Timestamp.UnixMilli(),
+//					Valid: true,
+//				}
+//				tx.Save(row)
+//			}
+//			return nil
+//		})
+//		require.NoError(t, err)
+//	}
+//}

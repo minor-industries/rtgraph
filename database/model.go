@@ -5,11 +5,10 @@ import (
 )
 
 type Value struct {
-	ID        []byte    `gorm:"primary_key"`
-	Timestamp time.Time `gorm:"index"`
+	ID        []byte `gorm:"primary_key"`
+	Timestamp int64  `gorm:"index;not null"`
 	Value     float64
-	SeriesID  []byte  `gorm:"index;not null"`
-	Series    *Series `gorm:"foreignKey:SeriesID"`
+	SeriesID  []byte `gorm:"index;not null"`
 }
 
 type Series struct {

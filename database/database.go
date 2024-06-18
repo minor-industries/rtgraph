@@ -3,6 +3,7 @@ package database
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"fmt"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
@@ -79,7 +80,7 @@ func (b *Backend) GetORM() *gorm.DB {
 func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
 	b.Insert(&Value{
 		ID:        RandomID(),
-		Timestamp: timestamp,
+		Timestamp: timestamp.UnixMilli(),
 		Value:     value,
 		SeriesID:  HashedID(seriesName),
 	})
@@ -103,20 +104,29 @@ func NewBackend(
 }
 
 func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
-	q := b.db.Preload("Series").Where(
-		"series_id = ? and date(timestamp) = ?",
+	t1, err := time.ParseInLocation("2006-01-02", date, time.UTC)
+	if err != nil {
+		return schema.Series{}, errors.Wrap(err, "parse date")
+	}
+	t2 := t1.AddDate(0, 0, 1)
+
+	fmt.Println(date, t1, t2)
+
+	q := b.db.Where(
+		"series_id = ? and timestamp >= ? and timestamp < ?",
 		HashedID(seriesName),
-		date,
+		t1.UnixMilli(),
+		t2.UnixMilli(),
 	)
 
 	return b.loadDataWindow(seriesName, q)
 }
 
 func (b *Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
-	q := b.db.Preload("Series").Where(
+	q := b.db.Where(
 		"series_id = ? and timestamp >= ?",
 		HashedID(seriesName),
-		start,
+		start.UnixMilli(),
 	)
 
 	return b.loadDataWindow(seriesName, q)
@@ -138,7 +148,7 @@ func (b *Backend) loadDataWindow(seriesName string, query *gorm.DB) (schema.Seri
 
 	for idx, row := range rows {
 		result.Values[idx] = schema.Value{
-			Timestamp: row.Timestamp,
+			Timestamp: time.UnixMilli(row.Timestamp),
 			Value:     row.Value,
 		}
 	}
