@@ -6,7 +6,11 @@ export type Series = {
 
 export type DygraphRow = [Date, ...(number | null)[]];
 
-type Sample = [number, number, number];
+type Sample = [
+    number, // timestamp
+    number, // position
+    number // value
+];
 
 export class Cache {
     private lastSeen: { [key: number]: number };
@@ -86,7 +90,7 @@ export class Cache {
         return this.data;
     }
 
-    flattenAndAddGaps(data: Series[]) {
+    flattenAndAddGaps(data: Series[]): Sample[] {
         let flat: Sample[] = [];
 
         data.forEach(series => {

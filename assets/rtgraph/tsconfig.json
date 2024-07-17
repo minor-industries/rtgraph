@@ -2,12 +2,14 @@
   "compilerOptions": {
     "target": "es6",
     "module": "es6",
-    "outDir": ".",
+    "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "declaration": true,
+    "declarationDir": "./dist"
   },
   "include": [
     "src/**/*"
