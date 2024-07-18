@@ -12,5 +12,8 @@
   "type": "module",
   "scripts": {
     "test": "tsc && npx mocha dist/test"
+  },
+  "dependencies": {
+    "tinyqueue": "^3.0.0"
   }
 }

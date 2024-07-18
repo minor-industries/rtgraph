@@ -1,3 +1,5 @@
+import TinyQueue from 'tinyqueue';
+
 export type Series = {
     Pos: number;
     Timestamps: number[];
@@ -7,9 +9,10 @@ export type Series = {
 export type DygraphRow = [Date, ...(number | null)[]];
 
 type Sample = [
+    number, // position of series
     number, // timestamp
-    number, // position
-    number // value
+    number, // value
+    number, // position IN series
 ];
 
 export class Cache {
@@ -40,9 +43,9 @@ export class Cache {
 
         const flat = this.flattenAndAddGaps(data);
 
-        let row = this.newRow(flat[0][0])
+        let row = this.newRow(flat[0][1])
         flat.forEach(sample => {
-            const [timestamp, pos, value] = sample;
+            const [pos, timestamp, value, _] = sample;
             if (row[0].getTime() !== timestamp) {
                 row = this.newRow(timestamp)
             }
@@ -51,7 +54,7 @@ export class Cache {
     }
 
     private appendSingle(sample: Sample) {
-        const [timestamp, pos, value] = sample;
+        const [pos, timestamp, value, _] = sample;
 
         if (this.data.length === 0) {
             this.newRow(timestamp);
@@ -91,25 +94,43 @@ export class Cache {
     }
 
     private flattenAndAddGaps(data: Series[]): Sample[] {
-        let flat: Sample[] = [];
+        const flat: Sample[] = [];
 
-        data.forEach(series => {
-            for (let i = 0; i < series.Timestamps.length; i++) {
-                const timestamp = series.Timestamps[i];
-                const value = series.Values[i];
+        const queue = new TinyQueue<Sample>([], (a, b) => {
+            return a[1] - b[1];
+        });
 
-                const last = this.lastSeen[series.Pos]
-                this.lastSeen[series.Pos] = timestamp;
-                if (last !== undefined && timestamp - last > this.maxGapMS) {
-                    flat.push([timestamp - 1, series.Pos, NaN])
-                }
-                flat.push([timestamp, series.Pos, value]);
+        let remaining = data
+            .map(x => x.Timestamps.length)
+            .reduce((acc, x) => acc + x, 0);
+
+        for (let i = 0; i < data.length; i++) {
+            const series = data[i];
+            if (series.Timestamps.length == 0) {
+                continue; // perhaps not possible/allowed, but anyway
             }
-        })
+            queue.push([series.Pos, series.Timestamps[0], series.Values[0], 0]);
+        }
 
-        flat.sort((a, b) => {
-            return a[0] - b[0];
-        })
+        while (remaining > 0) {
+            const item = queue.pop()!;
+            remaining--;
+            flat.push(item);
+
+            const seriesPos = item[0];
+            const series = data[seriesPos];
+            const next = item[3] + 1;
+
+            if (next < series.Timestamps.length) {
+                const sample: Sample = [
+                    seriesPos,
+                    series.Timestamps[next],
+                    series.Values[next],
+                    next,
+                ];
+                queue.push(sample);
+            }
+        }
 
         return flat;
     }
