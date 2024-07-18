@@ -111,8 +111,6 @@ export class Cache {
     }
 
     private flattenAndAddGaps(data: Series[]): Sample[] {
-        // TODO: this mostly works, but fails for gaps when append is called twice
-
         const flat: Sample[] = [];
 
         const queue = new TinyQueue<Sample>([], (a, b) => {
