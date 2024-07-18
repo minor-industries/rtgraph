@@ -55,11 +55,10 @@ describe('interleave with coincident points', function () {
 });
 
 describe('interleave with gaps', function () {
+    const maxGapMS = 25;
+    const cache = new Cache(3, maxGapMS);
+
     it('merges', function () {
-        const maxGapMS = 25;
-
-        const cache = new Cache(3, maxGapMS);
-
         cache.append([
             {Pos: 0, Timestamps: [10, 40, 70], Values: [1, 4, 7]},
             {Pos: 1, Timestamps: [40, 50, 80], Values: [2, 5, 8]},
@@ -78,6 +77,9 @@ describe('interleave with gaps', function () {
             [new Date(80), null, 8, null],
         ]);
 
+    });
+
+    it('appends with gaps', function () {
         cache.append([
             {Pos: 0, Timestamps: [90, 100], Values: [10, 11]},
             {Pos: 1, Timestamps: [90, 140], Values: [12, 13]},
@@ -100,6 +102,32 @@ describe('interleave with gaps', function () {
             [new Date(110), null, null, 15],
             [new Date(139), null, NaN, null],
             [new Date(140), null, 13, null]
+        ]);
+    });
+
+    it('appends with overlap', function () {
+        cache.append([
+            {Pos: 0, Timestamps: [95, 105, 180], Values: [16, 17, 18]},
+            {Pos: 1, Timestamps: [95, 105, 180], Values: [19, 20, 21]},
+            {Pos: 2, Timestamps: [95, 105, 180], Values: [22, 23, 24]},
+        ])
+
+        expect(cache.getData()).to.deep.equal([
+            [new Date(10), 1, null, null],
+            [new Date(30), null, null, 3],
+            [new Date(39), NaN, null, null],
+            [new Date(40), 4, 2, 6],
+            [new Date(50), null, 5, null],
+            [new Date(69), NaN, null, NaN],
+            [new Date(70), 7, null, 9],
+            [new Date(79), null, NaN, null],
+            [new Date(80), null, 8, null],
+            [new Date(90), 10, 12, null],
+            [new Date(99), null, null, NaN],
+            [new Date(100), 11, null, 14],
+            [new Date(110), null, null, 15],
+            [new Date(139), null, NaN, null],
+            [new Date(140), null, 13, null],
         ]);
     });
 });
