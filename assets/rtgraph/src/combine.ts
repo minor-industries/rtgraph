@@ -90,7 +90,7 @@ export class Cache {
         return this.data;
     }
 
-    flattenAndAddGaps(data: Series[]): Sample[] {
+    private flattenAndAddGaps(data: Series[]): Sample[] {
         let flat: Sample[] = [];
 
         data.forEach(series => {
