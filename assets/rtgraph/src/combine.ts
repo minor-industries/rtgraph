@@ -94,6 +94,8 @@ export class Cache {
     }
 
     private flattenAndAddGaps(data: Series[]): Sample[] {
+        // TODO: this mostly works, but fails for gaps when append is called twice
+
         const flat: Sample[] = [];
 
         const queue = new TinyQueue<Sample>([], (a, b) => {
@@ -114,22 +116,41 @@ export class Cache {
 
         while (remaining > 0) {
             const item = queue.pop()!;
-            remaining--;
+            const pos = item[3];
             flat.push(item);
 
+            if (pos < 0) {
+                continue; // this was a gap
+            }
+
+            remaining--;
             const seriesPos = item[0];
             const series = data[seriesPos];
-            const next = item[3] + 1;
 
-            if (next < series.Timestamps.length) {
-                const sample: Sample = [
-                    seriesPos,
-                    series.Timestamps[next],
-                    series.Values[next],
-                    next,
-                ];
-                queue.push(sample);
+            const next = pos + 1;
+
+            if (next >= series.Timestamps.length) {
+                continue;
             }
+
+            const t0 = item[1];
+            const t1 = series.Timestamps[next];
+
+            if (t1 - t0 > this.maxGapMS) {
+                queue.push([
+                    seriesPos,
+                    t1 - 1,
+                    NaN,
+                    -1,
+                ]); // push a "gap" in addition to the next sample
+            }
+
+            queue.push([
+                seriesPos,
+                series.Timestamps[next],
+                series.Values[next],
+                next,
+            ]);
         }
 
         return flat;
