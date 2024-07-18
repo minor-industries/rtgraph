@@ -102,10 +102,6 @@ export class Cache {
             return a[1] - b[1];
         });
 
-        let remaining = data
-            .map(x => x.Timestamps.length)
-            .reduce((acc, x) => acc + x, 0);
-
         for (let i = 0; i < data.length; i++) {
             const series = data[i];
             if (series.Timestamps.length == 0) {
@@ -114,7 +110,7 @@ export class Cache {
             queue.push([series.Pos, series.Timestamps[0], series.Values[0], 0]);
         }
 
-        while (remaining > 0) {
+        while (queue.length > 0) {
             const item = queue.pop()!;
             const pos = item[3];
             flat.push(item);
@@ -123,7 +119,6 @@ export class Cache {
                 continue; // this was a gap
             }
 
-            remaining--;
             const seriesPos = item[0];
             const series = data[seriesPos];
 
