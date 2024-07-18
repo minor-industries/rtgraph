@@ -13,10 +13,10 @@ type Sample = [
 ];
 
 export class Cache {
-    private lastSeen: { [key: number]: number };
-    private maxGapMS: number;
-    private numSeries: number;
-    private data: DygraphRow[];
+    private readonly lastSeen: { [key: number]: number };
+    private readonly maxGapMS: number;
+    private readonly numSeries: number;
+    private readonly data: DygraphRow[];
 
     constructor(numSeries: number, maxGapMS: number) {
         this.lastSeen = {};

@@ -49,3 +49,29 @@ describe('interleave with coincident points', function () {
 
     expect(cache.getData()).to.deep.equal(expected);
 });
+
+describe('interleave with gaps', function () {
+    const maxGapMS = 25;
+
+    const cache = new Cache(3, maxGapMS);
+
+    cache.append([
+        {Pos: 0, Timestamps: [10, 40, 70], Values: [1, 4, 7]},
+        {Pos: 1, Timestamps: [40, 50, 80], Values: [2, 5, 8]},
+        {Pos: 2, Timestamps: [30, 40, 70], Values: [3, 6, 9]},
+    ]);
+
+    const expected = [
+        [new Date(10), 1, null, null],
+        [new Date(30), null, null, 3],
+        [new Date(39), NaN, null, null],
+        [new Date(40), 4, 2, 6],
+        [new Date(50), null, 5, null],
+        [new Date(69), NaN, null, NaN],
+        [new Date(70), 7, null, 9],
+        [new Date(79), null, NaN, null],
+        [new Date(80), null, 8, null],
+    ];
+
+    expect(cache.getData()).to.deep.equal(expected);
+});
