@@ -20,12 +20,21 @@ export class Cache {
     private readonly maxGapMS: number;
     private readonly numSeries: number;
     private readonly data: DygraphRow[];
+    private readonly series: Series[];
 
     constructor(numSeries: number, maxGapMS: number) {
         this.lastSeen = {};
         this.maxGapMS = maxGapMS;
         this.numSeries = numSeries;
         this.data = [];
+        this.series = [];
+        for (let i = 0; i < numSeries; i++) {
+            this.series[i] = {
+                Pos: i,
+                Timestamps: [],
+                Values: [],
+            };
+        }
     }
 
     private newRow(timestamp: number): DygraphRow {
@@ -80,6 +89,14 @@ export class Cache {
         } else {
             this.appendInternal(data);
         }
+
+        for (let i = 0; i < data.length; i++) {
+            const series = data[i];
+            for (let j = 0; j < series.Timestamps.length; j++) {
+                this.series[series.Pos].Timestamps.push(...series.Timestamps);
+                this.series[series.Pos].Values.push(...series.Values);
+            }
+        }
     }
 
     private appendInternal(data: Series[]) {
@@ -104,10 +121,23 @@ export class Cache {
 
         for (let i = 0; i < data.length; i++) {
             const series = data[i];
+            const pos = series.Pos;
             if (series.Timestamps.length == 0) {
                 continue; // perhaps not possible/allowed, but anyway
             }
-            queue.push([series.Pos, series.Timestamps[0], series.Values[0], 0]);
+
+            const storedSeries = this.series[pos];
+            if (storedSeries.Timestamps.length > 0) {
+                const t0 = storedSeries.Timestamps[storedSeries.Timestamps.length - 1];
+                const t1 = series.Timestamps[0];
+
+                if (t1 - t0 > this.maxGapMS) {
+                    const gap: Sample = [pos, t1 - 1, NaN, -1];
+                    queue.push(gap);
+                }
+            }
+
+            queue.push([pos, series.Timestamps[0], series.Values[0], 0]);
         }
 
         while (queue.length > 0) {
@@ -132,20 +162,10 @@ export class Cache {
             const t1 = series.Timestamps[next];
 
             if (t1 - t0 > this.maxGapMS) {
-                queue.push([
-                    seriesPos,
-                    t1 - 1,
-                    NaN,
-                    -1,
-                ]); // push a "gap" in addition to the next sample
+                queue.push([seriesPos, t1 - 1, NaN, -1]); // push a "gap" in addition to the next sample
             }
 
-            queue.push([
-                seriesPos,
-                series.Timestamps[next],
-                series.Values[next],
-                next,
-            ]);
+            queue.push([seriesPos, series.Timestamps[next], series.Values[next], next]);
         }
 
         return flat;
