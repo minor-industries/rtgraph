@@ -50,7 +50,7 @@ export class Cache {
             return;
         }
 
-        const flat = this.flattenAndAddGaps(data);
+        const flat = this.mergeAndAddGaps(data);
 
         let row = this.newRow(flat[0][1])
         flat.forEach(sample => {
@@ -89,18 +89,10 @@ export class Cache {
         } else {
             this.appendInternal(data);
         }
-
-        for (let i = 0; i < data.length; i++) {
-            const series = data[i];
-            for (let j = 0; j < series.Timestamps.length; j++) {
-                this.series[series.Pos].Timestamps.push(...series.Timestamps);
-                this.series[series.Pos].Values.push(...series.Values);
-            }
-        }
     }
 
     private appendInternal(data: Series[]) {
-        const flat = this.flattenAndAddGaps(data);
+        const flat = this.mergeAndAddGaps(data);
         flat.forEach(col => {
             this.appendSingle(col);
         })
@@ -110,24 +102,33 @@ export class Cache {
         return this.data;
     }
 
-    private flattenAndAddGaps(data: Series[]): Sample[] {
+    private mergeAndAddGaps(data_: Series[]): Sample[] {
         const flat: Sample[] = [];
+
+        const startPositions = this.series.map(x => x.Timestamps.length);
+
+        for (let i = 0; i < data_.length; i++) {
+            const series = data_[i];
+            this.series[series.Pos].Timestamps.push(...series.Timestamps);
+            this.series[series.Pos].Values.push(...series.Values);
+        }
 
         const queue = new TinyQueue<Sample>([], (a, b) => {
             return a[1] - b[1];
         });
 
-        for (let i = 0; i < data.length; i++) {
-            const series = data[i];
-            const pos = series.Pos;
-            if (series.Timestamps.length == 0) {
-                continue; // perhaps not possible/allowed, but anyway
+        for (let pos = 0; pos < this.numSeries; pos++) {
+            const series = this.series[pos];
+            const start = startPositions[pos];
+
+            if (series.Timestamps.length === start) {
+                continue; // no more data
             }
 
             const storedSeries = this.series[pos];
-            if (storedSeries.Timestamps.length > 0) {
-                const t0 = storedSeries.Timestamps[storedSeries.Timestamps.length - 1];
-                const t1 = series.Timestamps[0];
+            if (start > 0) {
+                const t0 = storedSeries.Timestamps[start - 1];
+                const t1 = series.Timestamps[start];
 
                 if (t1 - t0 > this.maxGapMS) {
                     // push gap before first entry of incoming series
@@ -136,7 +137,7 @@ export class Cache {
             }
 
             // push the first entry from the incoming series
-            queue.push([pos, series.Timestamps[0], series.Values[0], 0]);
+            queue.push([pos, series.Timestamps[start], series.Values[start], start]);
         }
 
         while (queue.length > 0) {
@@ -148,8 +149,8 @@ export class Cache {
                 continue; // this was a gap
             }
 
-            const seriesPos = item[0];
-            const series = data[seriesPos];
+            const pos = item[0];
+            const series = this.series[pos];
             const next = idx + 1;
 
             if (next >= series.Timestamps.length) {
@@ -161,11 +162,11 @@ export class Cache {
 
             if (t1 - t0 > this.maxGapMS) {
                 // push a "gap" in addition to the next sample
-                queue.push([seriesPos, t1 - 1, NaN, -1]);
+                queue.push([pos, t1 - 1, NaN, -1]);
             }
 
             // push the next sample from the series
-            queue.push([seriesPos, series.Timestamps[next], series.Values[next], next]);
+            queue.push([pos, series.Timestamps[next], series.Values[next], next]);
         }
 
         return flat;
