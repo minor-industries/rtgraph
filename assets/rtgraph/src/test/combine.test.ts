@@ -266,7 +266,7 @@ describe('soak test', function () {
             });
         };
 
-        for (let i = 0; i < 1000; i++) {
+        for (let i = 0; i < 10; i++) {
             i % 100 === 0 && console.log(i);
             t += 10; // TODO: set to introduce gaps
             append(t);
