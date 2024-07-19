@@ -51,52 +51,20 @@ export class Cache {
             return;
         }
 
-        const flat = this.mergeAndAddGaps(data);
-
-        let row = this.newRow(flat[0][1])
-        flat.forEach(sample => {
+        let row: DygraphRow;
+        let first = true;
+        this.mergeAndAddGaps(data, (sample: Sample) => {
             const [pos, timestamp, value, _] = sample;
-            if (row[0].getTime() !== timestamp) {
+            if (first || row[0].getTime() !== timestamp) {
                 row = this.newRow(timestamp)
+                first = false;
             }
             row[pos + 1] = value;
-        })
-    }
-
-    private appendSingle(sample: Sample) {
-        const [pos, timestamp, value, _] = sample;
-
-        if (this.data.length === 0) {
-            this.newRow(timestamp);
-        }
-
-        let idx = this.data.length - 1;
-        const maxTimestamp = this.data[idx][0].getTime();
-
-        if (timestamp < maxTimestamp) {
-            console.log("out-of-order", timestamp, maxTimestamp);
-            // for now ignore out-of-order timestamps;
-        } else if (timestamp === maxTimestamp) {
-            this.data[idx][pos + 1] = value;
-        } else {
-            const row = this.newRow(timestamp)
-            row[pos + 1] = value;
-        }
+        });
     }
 
     append(data: Series[]) {
-        if (this.data.length == 0) {
-            this.interleave(data)
-        } else {
-            this.appendInternal(data);
-        }
-    }
-
-    private appendInternal(data: Series[]) {
-        const flat = this.mergeAndAddGaps(data);
-        flat.forEach(col => {
-            this.appendSingle(col);
-        })
+        this.interleave(data);
     }
 
     getData(): DygraphRow[] {
@@ -168,9 +136,10 @@ export class Cache {
         existing.Values = V;
     }
 
-    private mergeAndAddGaps(data: Series[]): Sample[] {
-        const flat: Sample[] = [];
-
+    private mergeAndAddGaps(
+        data: Series[],
+        callback: (s: Sample) => void
+    ) {
         const [minT, overlap] = this.detectOverlap(data);
         console.log("overlap", overlap);
 
@@ -239,7 +208,7 @@ export class Cache {
         while (queue.length > 0) {
             const item = queue.pop()!;
             const idx = item[3];
-            flat.push(item);
+            callback(item);
 
             if (idx < 0) {
                 continue; // this was a gap
@@ -264,7 +233,5 @@ export class Cache {
             // push the next sample from the series
             queue.push([pos, series.Timestamps[next], series.Values[next], next]);
         }
-
-        return flat;
     }
 }
