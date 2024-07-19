@@ -1,4 +1,5 @@
 import TinyQueue from 'tinyqueue';
+import {binarySearch} from "./binary_search.js";
 
 export type Series = {
     Pos: number;
@@ -102,9 +103,9 @@ export class Cache {
         return this.data;
     }
 
-    private detectOverlap(data: Series[]): boolean {
-        if (this.data.length == 0) {
-            return false;
+    private detectOverlap(data: Series[]): [number, boolean] {
+        if (this.data.length === 0) {
+            return [0, false];
         }
 
         const t1 = data
@@ -114,15 +115,32 @@ export class Cache {
 
         console.log("minT", t1);
 
+        if (t1 === Number.MAX_VALUE) {
+            return [0, false];
+        }
+
         const t0 = this.data[this.data.length - 1][0].getTime();
-        return t1 <= t0;
+        return [t1, t1 <= t0];
     }
 
     private mergeAndAddGaps(data: Series[]): Sample[] {
         const flat: Sample[] = [];
 
-        const overlap = this.detectOverlap(data);
+        const [minT, overlap] = this.detectOverlap(data);
         console.log("overlap", overlap);
+
+        if (overlap) {
+            const idx = binarySearch(
+                this.data,
+                // eventually I think instead of replacing an exact time match we can probably merge
+                x => {
+                    console.log(x[0].getTime(), minT);
+                    return x[0].getTime() >= minT;
+                }
+            );
+
+            console.log("replace everything from", idx, this.data[idx]);
+        }
 
         const startPositions = this.series.map(x => x.Timestamps.length);
 
