@@ -174,6 +174,8 @@ export class Cache {
         const [minT, overlap] = this.detectOverlap(data);
         console.log("overlap", overlap);
 
+        let startPositions: number[];
+
         if (overlap) {
             const idx = binarySearch(
                 this.data,
@@ -184,10 +186,21 @@ export class Cache {
                 }
             );
 
-            console.log("replace everything from", idx, this.data[idx]);
-        }
+            startPositions = this.series.map(s => {
+                const idx = binarySearch(
+                    s.Timestamps,
+                    x => x >= minT
+                );
 
-        const startPositions = this.series.map(x => x.Timestamps.length);
+                if (idx === -1) {
+                    return s.Timestamps.length;
+                }
+
+                return idx;
+            });
+        } else {
+            startPositions = this.series.map(x => x.Timestamps.length);
+        }
 
         for (let i = 0; i < data.length; i++) {
             this.mergeSingleSeries(data[i]);
