@@ -1,9 +1,11 @@
-type Comparator<T> = (element: T) => boolean;
-
-export function binarySearch<T>(arr: T[], comparator: Comparator<T>): number {
+export function binarySearch<T>(
+    arr: T[],
+    notFoundValue: number,
+    comparator: Comparator<T>
+): number {
     let left = 0;
     let right = arr.length - 1;
-    let result = -1;
+    let result = notFoundValue;
 
     while (left <= right) {
         const mid = Math.floor((left + right) / 2);
@@ -17,6 +19,8 @@ export function binarySearch<T>(arr: T[], comparator: Comparator<T>): number {
 
     return result;
 }
+
+type Comparator<T> = (element: T) => boolean;
 
 // For number arrays
 export const greaterThan = (x: number) => (element: number) => element > x;

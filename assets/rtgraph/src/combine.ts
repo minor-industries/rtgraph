@@ -143,27 +143,11 @@ export class Cache {
         let startPositions: number[];
 
         if (overlap) {
-            const idx = binarySearch(
-                this.data,
-                // eventually I think instead of replacing an exact time match we can probably merge
-                x => {
-                    return x[0].getTime() >= minT;
-                }
-            );
-
-            this.data.length = idx; // truncate data keeping only non-overlapping parts
-
+            // eventually I think instead of replacing an exact time match we can probably merge and change to less-than
+            // truncate data keeping only non-overlapping parts
+            this.data.length = binarySearch(this.data, -1, x => x[0].getTime() >= minT);
             startPositions = this.series.map(s => {
-                const idx = binarySearch(
-                    s.Timestamps,
-                    x => x >= minT
-                );
-
-                if (idx === -1) {
-                    return s.Timestamps.length;
-                }
-
-                return idx;
+                return binarySearch(s.Timestamps, s.Timestamps.length, x => x >= minT);
             });
         } else {
             startPositions = this.series.map(x => x.Timestamps.length);
