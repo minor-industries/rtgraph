@@ -18,16 +18,12 @@ type Sample = [
 ];
 
 export class Cache {
-    private readonly lastSeen: { [key: number]: number };
     private readonly maxGapMS: number;
-    private readonly numSeries: number;
     private readonly data: DygraphRow[];
     private readonly series: Series[];
 
     constructor(numSeries: number, maxGapMS: number) {
-        this.lastSeen = {};
         this.maxGapMS = maxGapMS;
-        this.numSeries = numSeries;
         this.data = [];
         this.series = [];
         for (let i = 0; i < numSeries; i++) {
@@ -40,7 +36,7 @@ export class Cache {
     }
 
     private newRow(timestamp: number): DygraphRow {
-        const row: any = new Array(this.numSeries + 1);
+        const row: any = new Array(this.series.length + 1);
         row.fill(null, 1);
         row[0] = new Date(timestamp);
         this.data.push(row)
@@ -135,7 +131,7 @@ export class Cache {
             return a[1] - b[1];
         });
 
-        for (let pos = 0; pos < this.numSeries; pos++) {
+        for (let pos = 0; pos < this.series.length; pos++) {
             const series = this.series[pos];
             const start = startPositions[pos];
 
