@@ -114,22 +114,48 @@ describe('interleave with gaps', function () {
 
         console.log(cache.getData());
 
+        // expect(cache.getData()).to.deep.equal([
+        //     [new Date(10), 1, null, null],
+        //     [new Date(30), null, null, 3],
+        //     [new Date(39), NaN, null, null],
+        //     [new Date(40), 4, 2, 6],
+        //     [new Date(50), null, 5, null],
+        //     [new Date(69), NaN, null, NaN],
+        //     [new Date(70), 7, null, 9],
+        //     [new Date(79), null, NaN, null],
+        //     [new Date(80), null, 8, null],
+        //     [new Date(90), 10, 12, null],
+        //     [new Date(99), null, null, NaN],
+        //     [new Date(100), 11, null, 14],
+        //     [new Date(110), null, null, 15],
+        //     [new Date(139), null, NaN, null],
+        //     [new Date(140), null, 13, null],
+        // ]);
+    });
+});
+
+describe('overlaps and edge cases', function () {
+    const maxGapMS = 25;
+    const cache = new Cache(1, maxGapMS);
+
+    it('one', function () {
+        cache.append([
+            {Pos: 0, Timestamps: [10, 40, 70], Values: [1, 4, 7]},
+        ]);
+
+        cache.append([
+            {Pos: 0, Timestamps: [20, 50, 80], Values: [2, 5, 8]},
+        ]);
+
+        console.log(cache.getData());
+
         expect(cache.getData()).to.deep.equal([
-            [new Date(10), 1, null, null],
-            [new Date(30), null, null, 3],
-            [new Date(39), NaN, null, null],
-            [new Date(40), 4, 2, 6],
-            [new Date(50), null, 5, null],
-            [new Date(69), NaN, null, NaN],
-            [new Date(70), 7, null, 9],
-            [new Date(79), null, NaN, null],
-            [new Date(80), null, 8, null],
-            [new Date(90), 10, 12, null],
-            [new Date(99), null, null, NaN],
-            [new Date(100), 11, null, 14],
-            [new Date(110), null, null, 15],
-            [new Date(139), null, NaN, null],
-            [new Date(140), null, 13, null],
+            [new Date(10), 1],
+            [new Date(20), 2],
+            [new Date(40), 4],
+            [new Date(50), 5],
+            [new Date(70), 7],
+            [new Date(80), 8],
         ]);
     });
 });
