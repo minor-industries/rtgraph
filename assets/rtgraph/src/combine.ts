@@ -123,6 +123,11 @@ export class Cache {
         return [t1, t1 <= t0];
     }
 
+    private mergeSingleSeries(series: Series) {
+        this.series[series.Pos].Timestamps.push(...series.Timestamps);
+        this.series[series.Pos].Values.push(...series.Values);
+    }
+
     private mergeAndAddGaps(data: Series[]): Sample[] {
         const flat: Sample[] = [];
 
@@ -145,9 +150,7 @@ export class Cache {
         const startPositions = this.series.map(x => x.Timestamps.length);
 
         for (let i = 0; i < data.length; i++) {
-            const series = data[i];
-            this.series[series.Pos].Timestamps.push(...series.Timestamps);
-            this.series[series.Pos].Values.push(...series.Values);
+            this.mergeSingleSeries(data[i]);
         }
 
         const queue = new TinyQueue<Sample>([], (a, b) => {
