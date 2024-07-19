@@ -81,8 +81,6 @@ export class Cache {
             .map(x => x.Timestamps[0])
             .reduce((acc, x) => x < acc ? x : acc, Number.MAX_VALUE);
 
-        console.log("minT", t1);
-
         if (t1 === Number.MAX_VALUE) {
             return [0, false];
         }
@@ -141,7 +139,6 @@ export class Cache {
         callback: (s: Sample) => void
     ) {
         const [minT, overlap] = this.detectOverlap(data);
-        console.log("overlap", overlap);
 
         let startPositions: number[];
 
