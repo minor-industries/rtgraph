@@ -1,5 +1,6 @@
 import TinyQueue from 'tinyqueue';
 import {binarySearch} from "./binary_search.js";
+import {sortedArrayMerge} from "./sorted_array_merge.js";
 
 export type Series = {
     Pos: number;
@@ -89,49 +90,20 @@ export class Cache {
         return [t1, t1 <= t0];
     }
 
-    private appendSingleSeries(series: Series) {
-        this.series[series.Pos].Timestamps.push(...series.Timestamps);
-        this.series[series.Pos].Values.push(...series.Values);
-    }
-
     private mergeSingleSeries(series: Series) {
-        if (series.Timestamps.length === 0) {
-            return;
-        }
-
         const existing = this.series[series.Pos];
-        if (existing.Timestamps.length === 0) {
-            this.appendSingleSeries(series);
-            return;
+
+        if (existing.Values.length === 0) {
+            existing.Timestamps = series.Timestamps;
+            existing.Values = series.Values;
+        } else {
+            sortedArrayMerge(
+                existing.Timestamps,
+                existing.Values,
+                series.Timestamps,
+                series.Values
+            );
         }
-
-        const t0 = existing.Timestamps[existing.Timestamps.length - 1];
-        const t1 = series.Timestamps[0];
-
-        if (t1 > t0) {
-            this.appendSingleSeries(series);
-            return;
-        }
-
-        // there's overlap, so
-        // this is a quick and dirty implementation, we can and should do better
-        // storing timestamps and values separately doesn't lend itself well here
-        const X = Array.prototype.concat(existing.Timestamps, series.Timestamps);
-        const Y = Array.prototype.concat(existing.Values, series.Values);
-
-        const pairs = X.map((timestamp, index) => [timestamp, Y[index]]);
-        pairs.sort((x, y) => x[0] - y[0]);
-
-        const T: number[] = [];
-        const V: number[] = [];
-
-        for (let i = 0; i < pairs.length; i++) {
-            T.push(pairs[i][0]);
-            V.push(pairs[i][1]);
-        }
-
-        existing.Timestamps = T;
-        existing.Values = V;
     }
 
     private mergeAndAddGaps(
@@ -145,7 +117,7 @@ export class Cache {
         if (overlap) {
             // eventually I think instead of replacing an exact time match we can probably merge and change to less-than
             // truncate data keeping only non-overlapping parts
-            this.data.length = binarySearch(this.data, -1, x => x[0].getTime() >= minT);
+            this.data.length = binarySearch(this.data, this.data.length, x => x[0].getTime() >= minT);
             startPositions = this.series.map(s => {
                 return binarySearch(s.Timestamps, s.Timestamps.length, x => x >= minT);
             });
