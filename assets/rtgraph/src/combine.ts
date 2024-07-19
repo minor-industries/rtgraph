@@ -181,10 +181,11 @@ export class Cache {
                 this.data,
                 // eventually I think instead of replacing an exact time match we can probably merge
                 x => {
-                    console.log(x[0].getTime(), minT);
                     return x[0].getTime() >= minT;
                 }
             );
+
+            this.data.length = idx; // truncate data keeping only non-overlapping parts
 
             startPositions = this.series.map(s => {
                 const idx = binarySearch(
@@ -202,10 +203,12 @@ export class Cache {
             startPositions = this.series.map(x => x.Timestamps.length);
         }
 
+        // merge incoming data series
         for (let i = 0; i < data.length; i++) {
             this.mergeSingleSeries(data[i]);
         }
 
+        // start the main algorithm
         const queue = new TinyQueue<Sample>([], (a, b) => {
             return a[1] - b[1];
         });

@@ -112,6 +112,8 @@ describe('interleave with gaps', function () {
             {Pos: 2, Timestamps: [95, 105, 180], Values: [22, 23, 24]},
         ])
 
+        console.log(cache.getData());
+
         expect(cache.getData()).to.deep.equal([
             [new Date(10), 1, null, null],
             [new Date(30), null, null, 3],
