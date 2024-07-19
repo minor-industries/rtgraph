@@ -1,5 +1,6 @@
-import {Cache} from '../combine.js';
+import {Cache, Series} from '../combine.js';
 import {expect} from "chai";
+import _ from "lodash";
 
 describe('normal interleave', function () {
     it('merges', function () {
@@ -196,3 +197,83 @@ describe('overlaps and edge cases', function () {
         ]);
     });
 });
+
+function randInt(max: number) {
+    return Math.floor(Math.random() * max);
+}
+
+function buildData(allSamples: [number, number, number][]) {
+    const groupedData = Object.values(_.groupBy(allSamples, (tuple) => tuple[0]));
+    groupedData.sort((a, b) => a[0][0] - b[0][0]);
+
+    return groupedData.map(row => {
+        const result = Array.prototype.concat(
+            [new Date(row[0][0])],
+            Array.from({length: 5}, () => null)
+        );
+        row.forEach(col => {
+            result[col[2] + 1] = col[1];
+        })
+        return result;
+    });
+}
+
+describe('soak test', function () {
+    const maxGapMS = 2500;
+    const numSeries = 5;
+    const cache = new Cache(numSeries, maxGapMS);
+    const allSamples: [number, number, number][] = [];
+    let t = 1000;
+
+    it("soaks", function () {
+        this.timeout(60 * 1000);
+        let curValue = 1;
+
+        const genValues = (n_: number, t_: number): [number[], number[]] => {
+            const n = 1 + randInt(n_);
+
+            let t = t_ - 50 + randInt(100)
+
+            const x = [];
+            const y = [];
+
+            for (let i = 0; i < n; i++) {
+                x.push(t);
+                t += 1 + randInt(10);
+                y.push(curValue++);
+            }
+
+            return [x, y];
+        }
+
+        const append = (t: number) => {
+            const newData: Series[] = [];
+            for (let i = 0; i < numSeries; i++) {
+                const [x, y] = genValues(10, t);
+                newData.push({
+                    Pos: i,
+                    Timestamps: x,
+                    Values: y,
+                });
+            }
+
+            cache.append(newData);
+
+            newData.forEach(s => {
+                for (let i = 0; i < s.Timestamps.length; i++) {
+                    allSamples.push([s.Timestamps[i], s.Values[i], s.Pos]);
+                }
+            });
+        };
+
+        for (let i = 0; i < 1000; i++) {
+            i % 100 === 0 && console.log(i);
+            t += 10; // TODO: set to introduce gaps
+            append(t);
+
+            const expected = buildData(allSamples);
+            expect(cache.getData()).to.deep.equal(expected);
+        }
+    });
+});
+

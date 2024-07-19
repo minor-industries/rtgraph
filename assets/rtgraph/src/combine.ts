@@ -21,8 +21,10 @@ export class Cache {
     private readonly maxGapMS: number;
     private readonly data: DygraphRow[];
     private readonly series: Series[];
+    overlapCount: number;
 
     constructor(numSeries: number, maxGapMS: number) {
+        this.overlapCount = 0;
         this.maxGapMS = maxGapMS;
         this.data = [];
         this.series = [];
@@ -111,6 +113,7 @@ export class Cache {
         let startPositions: number[];
 
         if (overlap) {
+            this.overlapCount++;
             // eventually I think instead of replacing an exact time match we can probably merge and change to less-than
             // truncate data keeping only non-overlapping parts
             this.data.length = binarySearch(this.data, this.data.length, x => x[0].getTime() >= minT);
