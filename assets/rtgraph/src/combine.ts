@@ -102,13 +102,32 @@ export class Cache {
         return this.data;
     }
 
-    private mergeAndAddGaps(data_: Series[]): Sample[] {
+    private detectOverlap(data: Series[]): boolean {
+        if (this.data.length == 0) {
+            return false;
+        }
+
+        const t1 = data
+            .filter(x => x.Timestamps.length > 0)
+            .map(x => x.Timestamps[0])
+            .reduce((acc, x) => x < acc ? x : acc, Number.MAX_VALUE);
+
+        console.log("minT", t1);
+
+        const t0 = this.data[this.data.length - 1][0].getTime();
+        return t1 <= t0;
+    }
+
+    private mergeAndAddGaps(data: Series[]): Sample[] {
         const flat: Sample[] = [];
+
+        const overlap = this.detectOverlap(data);
+        console.log("overlap", overlap);
 
         const startPositions = this.series.map(x => x.Timestamps.length);
 
-        for (let i = 0; i < data_.length; i++) {
-            const series = data_[i];
+        for (let i = 0; i < data.length; i++) {
+            const series = data[i];
             this.series[series.Pos].Timestamps.push(...series.Timestamps);
             this.series[series.Pos].Values.push(...series.Values);
         }
