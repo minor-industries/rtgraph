@@ -1,10 +1,6 @@
 import {Cache, Series} from "./combine.js"
-
-declare class Dygraph {
-    constructor(...args: any[])
-
-    updateOptions(arg: any): void
-}
+//@ts-ignore
+import Dygraph from 'dygraphs';
 
 declare module msgpack {
     export function decode(input: Uint8Array): any;
@@ -31,7 +27,7 @@ export class Graph {
     private readonly opts: { [p: string]: any };
     private readonly numSeries: number;
     private readonly windowSize: number;
-    dygraph: Dygraph;
+    dygraph: typeof Dygraph;
     private readonly cache: Cache;
     private readonly labels: string[];
     private t0Server: Date | undefined;
@@ -69,7 +65,7 @@ export class Graph {
         this.connect();
     }
 
-    private makeGraph(): Dygraph {
+    private makeGraph(): typeof Dygraph {
         let opts: { [key: string]: any } = {
             title: supplant(this.opts.title, {value: ""}),
             ylabel: this.opts.ylabel,
