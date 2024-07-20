@@ -26,6 +26,7 @@ func (g *Graph) setupServer() error {
 		"rtgraph/msgpack.min.js", "application/javascript",
 
 		"rtgraph/dist/rtgraph.js", "application/javascript",
+		"rtgraph/dist/rtgraph.min.js", "application/javascript",
 		"rtgraph/dist/combine.js", "application/javascript",
 		"rtgraph/rtgraph.css", "text/css",
 
