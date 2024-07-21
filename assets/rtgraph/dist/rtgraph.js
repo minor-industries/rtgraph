@@ -9213,9 +9213,217 @@ var Graph = class {
     setTimeout(() => this.connect(), 1e3);
   }
 };
-export {
-  Graph
+
+// dist/synchronizer.js
+var synchronize = function synchronize2() {
+  if (arguments.length === 0) {
+    throw "Invalid invocation of synchronize(). Need >= 1 argument.";
+  }
+  var OPTIONS = ["selection", "zoom", "range"];
+  var opts = {
+    selection: true,
+    zoom: true,
+    range: true
+  };
+  var dygraphs = [];
+  var prevCallbacks = [];
+  var parseOpts = function parseOpts2(obj) {
+    if (!(obj instanceof Object)) {
+      throw "Last argument must be either Dygraph or Object.";
+    } else {
+      for (var i2 = 0; i2 < OPTIONS.length; i2++) {
+        var optName = OPTIONS[i2];
+        if (obj.hasOwnProperty(optName))
+          opts[optName] = obj[optName];
+      }
+    }
+  };
+  if (arguments[0] instanceof dygraph_default) {
+    for (var i = 0; i < arguments.length; i++) {
+      if (arguments[i] instanceof dygraph_default) {
+        dygraphs.push(arguments[i]);
+      } else {
+        break;
+      }
+    }
+    if (i < arguments.length - 1) {
+      throw "Invalid invocation of synchronize(). All but the last argument must be Dygraph objects.";
+    } else if (i == arguments.length - 1) {
+      parseOpts(arguments[arguments.length - 1]);
+    }
+  } else if (arguments[0].length) {
+    for (var i = 0; i < arguments[0].length; i++) {
+      dygraphs.push(arguments[0][i]);
+    }
+    if (arguments.length == 2) {
+      parseOpts(arguments[1]);
+    } else if (arguments.length > 2) {
+      throw "Invalid invocation of synchronize(). Expected two arguments: array and optional options argument.";
+    }
+  } else {
+    throw "Invalid invocation of synchronize(). First parameter must be either Dygraph or list of Dygraphs.";
+  }
+  if (dygraphs.length < 2) {
+    throw "Invalid invocation of synchronize(). Need two or more dygraphs to synchronize.";
+  }
+  var readycount = dygraphs.length;
+  for (var i = 0; i < dygraphs.length; i++) {
+    var g = dygraphs[i];
+    g.ready(function onReady_() {
+      if (--readycount == 0) {
+        var callBackTypes = ["drawCallback", "highlightCallback", "unhighlightCallback"];
+        for (var j = 0; j < dygraphs.length; j++) {
+          if (!prevCallbacks[j]) {
+            prevCallbacks[j] = {};
+          }
+          for (var k = callBackTypes.length - 1; k >= 0; k--) {
+            prevCallbacks[j][callBackTypes[k]] = dygraphs[j].getFunctionOption(callBackTypes[k]);
+          }
+        }
+        if (opts.zoom) {
+          attachZoomHandlers(dygraphs, opts, prevCallbacks);
+        }
+        if (opts.selection) {
+          attachSelectionHandlers(dygraphs, prevCallbacks);
+        }
+      }
+    });
+  }
+  return {
+    detach: function detach() {
+      for (var i2 = 0; i2 < dygraphs.length; i2++) {
+        var g2 = dygraphs[i2];
+        if (opts.zoom) {
+          g2.updateOptions({ drawCallback: prevCallbacks[i2].drawCallback });
+        }
+        if (opts.selection) {
+          g2.updateOptions({
+            highlightCallback: prevCallbacks[i2].highlightCallback,
+            unhighlightCallback: prevCallbacks[i2].unhighlightCallback
+          });
+        }
+      }
+      dygraphs = null;
+      opts = null;
+      prevCallbacks = null;
+    }
+  };
 };
+function arraysAreEqual(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b))
+    return false;
+  var i = a.length;
+  if (i !== b.length)
+    return false;
+  while (i--) {
+    if (a[i] !== b[i])
+      return false;
+  }
+  return true;
+}
+function attachZoomHandlers(gs, syncOpts, prevCallbacks) {
+  var block = false;
+  for (var i = 0; i < gs.length; i++) {
+    var g = gs[i];
+    g.updateOptions(
+      {
+        drawCallback: function synchronizer_drawCallback(me, initial) {
+          if (block || initial) {
+            for (let j = 0; j < gs.length; j++) {
+              if (gs[j] == me) {
+                if (prevCallbacks[j] && prevCallbacks[j].drawCallback) {
+                  prevCallbacks[j].drawCallback.apply(this, arguments);
+                }
+                break;
+              }
+            }
+            return;
+          }
+          block = true;
+          var opts = {
+            dateWindow: me.xAxisRange()
+          };
+          if (!me.isZoomed("x"))
+            opts.dateWindow = null;
+          if (syncOpts.range)
+            opts.valueRange = me.yAxisRange();
+          for (let j = 0; j < gs.length; j++) {
+            if (gs[j] == me) {
+              if (prevCallbacks[j] && prevCallbacks[j].drawCallback) {
+                prevCallbacks[j].drawCallback.apply(this, arguments);
+              }
+              continue;
+            }
+            if (arraysAreEqual(opts.dateWindow, gs[j].getOption("dateWindow")) && (!syncOpts.range || arraysAreEqual(opts.valueRange, gs[j].getOption("valueRange")))) {
+              continue;
+            }
+            gs[j].updateOptions(opts);
+          }
+          block = false;
+        }
+      },
+      true
+      /* no need to redraw */
+    );
+  }
+}
+function attachSelectionHandlers(gs, prevCallbacks) {
+  var block = false;
+  for (var i = 0; i < gs.length; i++) {
+    var g = gs[i];
+    g.updateOptions(
+      {
+        highlightCallback: function synchronizer_highlightCallback(event, x, points, row, seriesName) {
+          if (block)
+            return;
+          block = true;
+          var me = this;
+          for (var i2 = 0; i2 < gs.length; i2++) {
+            if (me == gs[i2]) {
+              if (prevCallbacks[i2] && prevCallbacks[i2].highlightCallback) {
+                prevCallbacks[i2].highlightCallback.apply(this, arguments);
+              }
+              continue;
+            }
+            var idx = gs[i2].getRowForX(x);
+            if (idx !== null) {
+              gs[i2].setSelection(idx, seriesName, void 0, true);
+            }
+          }
+          block = false;
+        },
+        unhighlightCallback: function synchronizer_unhighlightCallback(event) {
+          if (block)
+            return;
+          block = true;
+          var me = this;
+          for (var i2 = 0; i2 < gs.length; i2++) {
+            if (me == gs[i2]) {
+              if (prevCallbacks[i2] && prevCallbacks[i2].unhighlightCallback) {
+                prevCallbacks[i2].unhighlightCallback.apply(this, arguments);
+              }
+              continue;
+            }
+            gs[i2].clearSelection();
+          }
+          block = false;
+        }
+      },
+      true
+      /* no need to redraw */
+    );
+  }
+}
+var synchronizer_default = synchronize;
+export {
+  Graph,
+  synchronizer_default as synchronize
+};
+/**
+ * @license
+ * Part of dygraphs, see top-level LICENSE.txt file
+ * MIT-licenced: https://opensource.org/licenses/MIT
+ */
 /*! Bundled license information:
 
 dygraphs/src/dygraph-tickers.js:
