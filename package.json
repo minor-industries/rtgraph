@@ -6,7 +6,7 @@
   "main": "assets/rtgraph/dist/index.js",
   "scripts": {
     "clean": "cd assets/rtgraph && rm -rf dist coverage",
-    "build": "cd assets/rtgraph && tsc",
+    "build": "cd assets/rtgraph && tsc && cp src/*.d.ts dist/",
     "test": "cd assets/rtgraph && tsc && mocha dist/test --recursive",
     "coverage": "cd assets/rtgraph && npm run clean && npm run build && c8 --reporter=html --reporter=text-summary mocha dist/test --recursive",
     "package": "cd assets/rtgraph && node esbuild.config.mjs"
