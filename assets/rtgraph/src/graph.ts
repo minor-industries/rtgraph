@@ -81,7 +81,7 @@ export class Graph {
         }
 
         const dummyRow = [new Date()].concat(new Array(this.numSeries).fill(NaN));
-        return new Dygraph(this.elem, [dummyRow], opts);
+        return new (Dygraph as any)(this.elem, [dummyRow], opts);
     }
 
     private disableInteraction() {
@@ -135,11 +135,11 @@ export class Graph {
             }
         }
 
-        this.dygraph.updateOptions(updateOpts);
+        (this.dygraph as any).updateOptions(updateOpts);
     }
 
     setDateWindow(window: [Date, Date]) {
-        this.dygraph.updateOptions({
+        (this.dygraph as any).updateOptions({
             dateWindow: window,
         });
     }
@@ -164,7 +164,7 @@ export class Graph {
             if (this.dygraph === null) {
                 return;
             }
-            this.dygraph.updateOptions({
+            (this.dygraph as any).updateOptions({
                 dateWindow: this.computeDateWindow(),
             })
         }, 250);
