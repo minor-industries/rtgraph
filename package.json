@@ -5,7 +5,7 @@
   "type": "module",
   "main": "assets/rtgraph/dist/index.js",
   "scripts": {
-    "clean": "rm -rf dist coverage",
+    "clean": "cd assets/rtgraph && rm -rf dist coverage",
     "build": "cd assets/rtgraph && tsc",
     "test": "cd assets/rtgraph && tsc && mocha dist/test --recursive",
     "coverage": "cd assets/rtgraph && npm run clean && npm run build && c8 --reporter=html --reporter=text-summary mocha dist/test --recursive",
