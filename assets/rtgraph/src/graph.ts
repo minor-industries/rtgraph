@@ -84,8 +84,10 @@ export class Graph {
             return;
         }
 
-        const [loDate, hiDate]: [Date, Date] = (g as any).xAxisRange();
-        const [lo, hi]: [number, number] = [loDate.getTime(), hiDate.getTime()];
+        const range: [number | Date, number | Date] = (g as any).xAxisRange();
+        const mapped = range.map((x: number | Date) => (x instanceof Date) ? x.getTime() : x);
+        const lo = mapped[0];
+        const hi = mapped[1];
 
         const series = this.cache.getSeries();
 

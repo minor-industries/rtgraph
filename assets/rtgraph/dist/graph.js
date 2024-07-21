@@ -35,8 +35,10 @@ export class Graph {
         if (!this.opts.drawCallback) {
             return;
         }
-        const [loDate, hiDate] = g.xAxisRange();
-        const [lo, hi] = [loDate.getTime(), hiDate.getTime()];
+        const range = g.xAxisRange();
+        const mapped = range.map((x) => (x instanceof Date) ? x.getTime() : x);
+        const lo = mapped[0];
+        const hi = mapped[1];
         const series = this.cache.getSeries();
         const indicies = new Array(series.length);
         for (let i = 0; i < series.length; i++) {
