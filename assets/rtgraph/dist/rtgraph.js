@@ -9072,6 +9072,9 @@ var Graph = class {
     this.dygraph = this.makeGraph();
     this.connect();
   }
+  onDraw(g) {
+    const [lo, hi] = g.xAxisRange();
+  }
   makeGraph() {
     let opts = {
       title: supplant(this.opts.title, { value: "" }),
@@ -9084,7 +9087,8 @@ var Graph = class {
       rightGap: 5,
       connectSeparatedPoints: true,
       valueRange: this.opts.valueRange,
-      series: this.opts.series
+      series: this.opts.series,
+      drawCallback: this.onDraw
     };
     if (this.disableInteraction()) {
       opts.interactionModel = {};

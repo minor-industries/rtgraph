@@ -18,6 +18,22 @@ const isTouchDevice = () => {
         (navigator.maxTouchPoints > 0));
 };
 
+export type GraphOptions = {
+    title: string;
+    ylabel?: string;
+    seriesNames: string[];
+    maxGapMs?: number;
+    strokeWidth?: number;
+    windowSize?: number;
+    includeZero?: boolean;
+    height?: number;
+    valueRange?: [number, number];
+    series?: { [key: string]: any }; // This can be further refined if the structure of series is known
+    reorderData?: boolean;
+    disableScroll?: boolean;
+    date?: Date;
+};
+
 export class Graph {
     private readonly elem: HTMLElement;
     private readonly opts: { [p: string]: any };
@@ -31,7 +47,7 @@ export class Graph {
 
     constructor(
         elem: HTMLElement,
-        opts: { [key: string]: any }
+        opts: GraphOptions
     ) {
         this.elem = elem;
         this.opts = opts;
@@ -61,6 +77,12 @@ export class Graph {
         this.connect();
     }
 
+    private onDraw(g: typeof Dygraph) {
+        const [lo, hi]: [Date, Date] = (g as any).xAxisRange();
+        // const delta = (hi.getTime() - lo.getTime()) / 1000.0
+        // console.log(delta);
+    }
+
     private makeGraph(): typeof Dygraph {
         let opts: { [key: string]: any } = {
             title: supplant(this.opts.title, {value: ""}),
@@ -74,6 +96,7 @@ export class Graph {
             connectSeparatedPoints: true,
             valueRange: this.opts.valueRange,
             series: this.opts.series,
+            drawCallback: this.onDraw
         };
 
         if (this.disableInteraction()) {
