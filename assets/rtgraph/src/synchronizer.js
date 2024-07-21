@@ -12,14 +12,14 @@
  *   var g1 = new Dygraph(...),
  *       g2 = new Dygraph(...),
  *       ...;
- *   var sync = Dygraph.synchronize(g1, g2, ...);
+ *   var sync = synchronize(g1, g2, ...);
  *   // charts are now synchronized
  *   sync.detach();
  *   // charts are no longer synchronized
  *
  * You can set options using the last parameter, for example:
  *
- *   var sync = Dygraph.synchronize(g1, g2, g3, {
+ *   var sync = synchronize(g1, g2, g3, {
  *      selection: true,
  *      zoom: true
  *   });
@@ -29,7 +29,7 @@
  * Instead of passing one Dygraph object as each parameter, you may also pass an
  * array of dygraphs:
  *
- *   var sync = Dygraph.synchronize([g1, g2, g3], {
+ *   var sync = synchronize([g1, g2, g3], {
  *      selection: false,
  *      zoom: true
  *   });
@@ -38,22 +38,11 @@
  * The `range` option has no effect unless `zoom` is true (the default).
  */
 
-/* loader wrapper to allow browser use and ES6 imports */
-(function _extras_synchronizer_closure() {
-'use strict';
-var Dygraph;
-if (window.Dygraph) {
-  Dygraph = window.Dygraph;
-} else if (typeof(module) !== 'undefined') {
-  Dygraph = require('../dygraph');
-  if (typeof(Dygraph.NAME) === 'undefined' && typeof(Dygraph.default) !== 'undefined')
-    Dygraph = Dygraph.default;
-}
-/* end of loader wrapper header */
+import Dygraph from "dygraphs";
 
 var synchronize = function synchronize(/* dygraphs..., opts */) {
   if (arguments.length === 0) {
-    throw 'Invalid invocation of Dygraph.synchronize(). Need >= 1 argument.';
+    throw 'Invalid invocation of synchronize(). Need >= 1 argument.';
   }
 
   var OPTIONS = ['selection', 'zoom', 'range'];
@@ -86,7 +75,7 @@ var synchronize = function synchronize(/* dygraphs..., opts */) {
       }
     }
     if (i < arguments.length - 1) {
-      throw 'Invalid invocation of Dygraph.synchronize(). ' +
+      throw 'Invalid invocation of synchronize(). ' +
             'All but the last argument must be Dygraph objects.';
     } else if (i == arguments.length - 1) {
       parseOpts(arguments[arguments.length - 1]);
@@ -99,16 +88,16 @@ var synchronize = function synchronize(/* dygraphs..., opts */) {
     if (arguments.length == 2) {
       parseOpts(arguments[1]);
     } else if (arguments.length > 2) {
-      throw 'Invalid invocation of Dygraph.synchronize(). ' +
+      throw 'Invalid invocation of synchronize(). ' +
             'Expected two arguments: array and optional options argument.';
     }  // otherwise arguments.length == 1, which is fine.
   } else {
-    throw 'Invalid invocation of Dygraph.synchronize(). ' +
+    throw 'Invalid invocation of synchronize(). ' +
           'First parameter must be either Dygraph or list of Dygraphs.';
   }
 
   if (dygraphs.length < 2) {
-    throw 'Invalid invocation of Dygraph.synchronize(). ' +
+    throw 'Invalid invocation of synchronize(). ' +
           'Need two or more dygraphs to synchronize.';
   }
 
@@ -266,8 +255,4 @@ function attachSelectionHandlers(gs, prevCallbacks) {
   }
 }
 
-Dygraph.synchronize = synchronize;
-
-/* closure and loader wrapper */
-Dygraph._require.add('dygraphs/src/extras/synchronizer.js', /* exports */ {});
-})();
+export default synchronize;
