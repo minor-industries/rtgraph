@@ -14,11 +14,10 @@ const isTouchDevice = () => {
 };
 export class Graph {
     constructor(elem, opts) {
-        var _a;
         this.elem = elem;
         this.opts = opts;
         this.numSeries = this.opts.seriesNames.length;
-        this.cache = new Cache(this.numSeries, (_a = this.opts.maxGapMs) !== null && _a !== void 0 ? _a : 60 * 1000);
+        this.cache = new Cache(this.numSeries, this.opts.maxGapMs ?? 60 * 1000);
         if (this.opts.labels !== undefined) {
             throw new Error("labels no longer supported");
         }
