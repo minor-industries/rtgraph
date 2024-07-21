@@ -1,0 +1,28 @@
+{
+  "type": "module",
+  "main": "assets/rtgraph/dist/index.js",
+  "scripts": {
+    "clean": "rm -rf dist coverage",
+    "build": "cd assets/rtgraph && tsc",
+    "test": "cd assets/rtgraph && tsc && mocha dist/test --recursive",
+    "coverage": "cd assets/rtgraph && npm run clean && npm run build && c8 --reporter=html --reporter=text-summary mocha dist/test --recursive",
+    "package": "cd assets/rtgraph && node esbuild.config.mjs"
+  },
+  "devDependencies": {
+    "@babel/parser": "^7.24.4",
+    "@types/chai": "^4.3.16",
+    "@types/lodash": "^4.17.7",
+    "@types/mocha": "^10.0.7",
+    "c8": "^10.1.2",
+    "chai": "^5.1.1",
+    "esbuild": "^0.23.0",
+    "lodash": "^4.17.21",
+    "mocha": "^10.6.0",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
+    "tinyqueue": "^3.0.0",
+    "dygraphs": "^2.2.1"
+  }
+}
