@@ -29,7 +29,6 @@ export type GraphOptions = {
     height?: number;
     valueRange?: [number, number];
     series?: { [key: string]: any }; // This can be further refined if the structure of series is known
-    reorderData?: boolean;
     disableScroll?: boolean;
     date?: Date;
 };
@@ -136,11 +135,7 @@ export class Graph {
             return;
         }
 
-        if (this.opts.reorderData === true) {
-            throw new Error("not implemented"); // TODO
-        } else {
-            this.cache.append(series);
-        }
+        this.cache.append(series);
 
         let updateOpts: { [key: string]: any } = {
             file: this.cache.getData(),
