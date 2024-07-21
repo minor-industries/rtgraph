@@ -1,10 +1,7 @@
 import {Cache, Series} from "./combine.js"
 //@ts-ignore
 import Dygraph from 'dygraphs';
-
-declare module msgpack {
-    export function decode(input: Uint8Array): any;
-}
+import {decode} from '@msgpack/msgpack'
 
 
 function supplant(s: string, o: any) {
@@ -188,10 +185,16 @@ export class Graph {
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
 
+        type Msg = {
+            error?: string;
+            now?: number;
+            rows?: Series[];
+        };
+
         ws.onmessage = message => {
             this.elem.classList.remove("rtgraph-disconnected");
             if (message.data instanceof ArrayBuffer) {
-                const msg = msgpack.decode(new Uint8Array(message.data));
+                const msg: Msg = decode(new Uint8Array(message.data)) as Msg;
 
                 if (msg.error !== undefined) {
                     alert(msg.error);

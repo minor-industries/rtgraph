@@ -22,6 +22,7 @@
     "coverage": "npm run clean && npm run build && c8 --reporter=html --reporter=text-summary mocha dist/test --recursive"
   },
   "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "tinyqueue": "^3.0.0"
   }
 }
