@@ -1,5 +1,4 @@
 import { Cache } from "./combine.js";
-//@ts-ignore
 import Dygraph from 'dygraphs';
 import { decode } from '@msgpack/msgpack';
 function supplant(s, o) {

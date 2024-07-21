@@ -1,5 +1,4 @@
 import {Cache, Series} from "./combine.js"
-//@ts-ignore
 import Dygraph from 'dygraphs';
 import {decode} from '@msgpack/msgpack'
 
