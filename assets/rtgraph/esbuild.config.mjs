@@ -1,7 +1,16 @@
 import {build} from 'esbuild';
 
 build({
-    entryPoints: ['./dist/rtgraph.js'],
+    entryPoints: ['./dist/index.js'],
+    bundle: true,
+    outfile: './dist/rtgraph.js',
+    format: 'esm',
+    minify: false
+}).catch(() => process.exit(1));
+
+
+build({
+    entryPoints: ['./dist/index.js'],
     bundle: true,
     outfile: './dist/rtgraph.min.js',
     format: 'esm',
