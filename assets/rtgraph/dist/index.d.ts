@@ -1,2 +1,3 @@
 import { Graph } from './graph.js';
-export { Graph };
+import synchronize from './synchronizer.js';
+export { Graph, synchronize };
