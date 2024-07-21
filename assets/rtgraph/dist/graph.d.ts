@@ -1,7 +1,7 @@
 import { Series } from "./combine.js";
 import Dygraph from 'dygraphs';
 export type GraphOptions = {
-    title: number;
+    title: string;
     ylabel?: string;
     seriesNames: string[];
     maxGapMs?: number;
@@ -13,15 +13,15 @@ export type GraphOptions = {
     series?: {
         [key: string]: any;
     };
-    reorderData?: boolean;
     disableScroll?: boolean;
     date?: Date;
+    drawCallback?: (lo: number, hi: number) => void;
 };
 export declare class Graph {
     private readonly elem;
     private readonly opts;
     private readonly numSeries;
-    private readonly windowSize;
+    private readonly windowSize?;
     dygraph: typeof Dygraph;
     private readonly cache;
     private readonly labels;

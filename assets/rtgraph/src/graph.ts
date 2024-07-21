@@ -28,16 +28,17 @@ export type GraphOptions = {
     includeZero?: boolean;
     height?: number;
     valueRange?: [number, number];
-    series?: { [key: string]: any }; // This can be further refined if the structure of series is known
+    series?: { [key: string]: any };
     disableScroll?: boolean;
     date?: Date;
+    drawCallback?: (lo: number, hi: number) => void;
 };
 
 export class Graph {
     private readonly elem: HTMLElement;
-    private readonly opts: { [p: string]: any };
+    private readonly opts: GraphOptions;
     private readonly numSeries: number;
-    private readonly windowSize: number;
+    private readonly windowSize?: number;
     dygraph: typeof Dygraph;
     private readonly cache: Cache;
     private readonly labels: string[];
@@ -56,10 +57,6 @@ export class Graph {
             this.opts.maxGapMs ?? 60 * 1000
         );
 
-        if (this.opts.labels !== undefined) {
-            throw new Error("labels no longer supported");
-        }
-
         this.opts.strokeWidth = this.opts.strokeWidth || 3.0;
         this.windowSize = this.opts.windowSize;
 
@@ -77,9 +74,13 @@ export class Graph {
     }
 
     private onDraw(g: typeof Dygraph) {
-        const [lo, hi]: [Date, Date] = (g as any).xAxisRange();
-        // const delta = (hi.getTime() - lo.getTime()) / 1000.0
-        // console.log(delta);
+        if (!this.opts.drawCallback) {
+            return;
+        }
+
+        const [loDate, hiDate]: [Date, Date] = (g as any).xAxisRange();
+        const [lo, hi]: [number, number] = [loDate.getTime(), hiDate.getTime()];
+        this.opts.drawCallback(lo, hi);
     }
 
     private makeGraph(): typeof Dygraph {
@@ -95,7 +96,7 @@ export class Graph {
             connectSeparatedPoints: true,
             valueRange: this.opts.valueRange,
             series: this.opts.series,
-            drawCallback: this.onDraw
+            drawCallback: this.onDraw.bind(this),
         };
 
         if (this.disableInteraction()) {

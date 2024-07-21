@@ -9057,9 +9057,6 @@ var Graph = class {
     this.opts = opts;
     this.numSeries = this.opts.seriesNames.length;
     this.cache = new Cache(this.numSeries, this.opts.maxGapMs ?? 60 * 1e3);
-    if (this.opts.labels !== void 0) {
-      throw new Error("labels no longer supported");
-    }
     this.opts.strokeWidth = this.opts.strokeWidth || 3;
     this.windowSize = this.opts.windowSize;
     this.t0Server = void 0;
@@ -9073,7 +9070,12 @@ var Graph = class {
     this.connect();
   }
   onDraw(g) {
-    const [lo, hi] = g.xAxisRange();
+    if (!this.opts.drawCallback) {
+      return;
+    }
+    const [loDate, hiDate] = g.xAxisRange();
+    const [lo, hi] = [loDate.getTime(), hiDate.getTime()];
+    this.opts.drawCallback(lo, hi);
   }
   makeGraph() {
     let opts = {
@@ -9088,7 +9090,7 @@ var Graph = class {
       connectSeparatedPoints: true,
       valueRange: this.opts.valueRange,
       series: this.opts.series,
-      drawCallback: this.onDraw
+      drawCallback: this.onDraw.bind(this)
     };
     if (this.disableInteraction()) {
       opts.interactionModel = {};
@@ -9119,11 +9121,7 @@ var Graph = class {
     if (series.length == 0) {
       return;
     }
-    if (this.opts.reorderData === true) {
-      throw new Error("not implemented");
-    } else {
-      this.cache.append(series);
-    }
+    this.cache.append(series);
     let updateOpts = {
       file: this.cache.getData(),
       labels: this.labels

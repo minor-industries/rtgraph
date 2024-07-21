@@ -59,6 +59,9 @@
                     }
                 },
                 maxGapMs: 1400,
+                drawCallback: (lo, hi) => {
+                    console.log(lo, hi);
+                },
             });
         });
     </script>
