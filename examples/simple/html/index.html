@@ -42,6 +42,11 @@
         document.addEventListener("DOMContentLoaded", () => {
             const minute = 1000 * 60;
 
+            const windowSize = minute;
+
+            let count = 0;
+            const t0 = new Date().getTime() - windowSize;
+
             new Graph(document.getElementById("graphdiv0"), {
                 seriesNames: [
                     "sample1 | gt 0.2",
@@ -52,15 +57,30 @@
                 ylabel: "random value",
                 title: "Sample Series: {value}",
                 height: 300,
-                windowSize: minute,
+                windowSize: windowSize,
                 series: {
                     y1: {
                         strokeWidth: 1,
                     }
                 },
                 maxGapMs: 1400,
-                drawCallback: (lo, hi) => {
-                    console.log(lo, hi);
+                drawCallback: (lo, hi, indices, series) => {
+                    count++;
+                    if (count % 25 !== 0) {
+                        return;
+                    }
+
+                    console.log("=============");
+                    console.log(new Date(lo), new Date(hi));
+                    for (let i = 0; i < series.length; i++) {
+                        const ts = series[i].Timestamps;
+                        const [i0, i1] = indices[i];
+                        if (i0 === -1) {
+                            continue;
+                        }
+                        console.log(i0, i1)
+                        console.log(new Date(ts[i0]), new Date(ts[i1 - 1]));
+                    }
                 },
             });
         });

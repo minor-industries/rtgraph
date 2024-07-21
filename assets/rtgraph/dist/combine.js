@@ -43,6 +43,9 @@ export class Cache {
     getData() {
         return this.data;
     }
+    getSeries() {
+        return this.series;
+    }
     detectOverlap(data) {
         if (this.data.length === 0) {
             return [0, false];

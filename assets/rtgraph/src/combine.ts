@@ -70,6 +70,10 @@ export class Cache {
         return this.data;
     }
 
+    getSeries(): Series[] {
+        return this.series;
+    }
+
     private detectOverlap(data: Series[]): [number, boolean] {
         if (this.data.length === 0) {
             return [0, false];

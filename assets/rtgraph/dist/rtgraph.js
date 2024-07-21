@@ -144,6 +144,9 @@ var Cache = class {
   getData() {
     return this.data;
   }
+  getSeries() {
+    return this.series;
+  }
   detectOverlap(data) {
     if (this.data.length === 0) {
       return [0, false];
@@ -9075,7 +9078,25 @@ var Graph = class {
     }
     const [loDate, hiDate] = g.xAxisRange();
     const [lo, hi] = [loDate.getTime(), hiDate.getTime()];
-    this.opts.drawCallback(lo, hi);
+    const series = this.cache.getSeries();
+    const indicies = new Array(series.length);
+    for (let i = 0; i < series.length; i++) {
+      const ts = series[i].Timestamps;
+      if (ts.length === 0) {
+        indicies[i] = [-1, -1];
+        continue;
+      }
+      const t0 = ts[0];
+      const tn = ts[ts.length - 1];
+      if (t0 > hi || tn < lo) {
+        indicies[i] = [-1, -1];
+        continue;
+      }
+      const i0 = binarySearch(ts, 0, (x) => x >= lo);
+      const i1 = binarySearch(ts, ts.length, (x) => hi < x);
+      indicies[i] = [i0, i1];
+    }
+    this.opts.drawCallback(lo, hi, indicies, series);
   }
   makeGraph() {
     let opts = {

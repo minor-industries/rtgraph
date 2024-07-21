@@ -1,6 +1,7 @@
 import {Cache, Series} from "./combine.js"
 import Dygraph from 'dygraphs';
 import {decode} from '@msgpack/msgpack'
+import {binarySearch} from "./binary_search.js";
 
 
 function supplant(s: string, o: any) {
@@ -31,7 +32,12 @@ export type GraphOptions = {
     series?: { [key: string]: any };
     disableScroll?: boolean;
     date?: Date;
-    drawCallback?: (lo: number, hi: number) => void;
+    drawCallback?: (
+        lo: number,
+        hi: number,
+        indices: [number, number][],
+        series: Series[],
+    ) => void;
 };
 
 export class Graph {
@@ -80,7 +86,33 @@ export class Graph {
 
         const [loDate, hiDate]: [Date, Date] = (g as any).xAxisRange();
         const [lo, hi]: [number, number] = [loDate.getTime(), hiDate.getTime()];
-        this.opts.drawCallback(lo, hi);
+
+        const series = this.cache.getSeries();
+
+        const indicies: [number, number][] = new Array(series.length);
+
+        for (let i = 0; i < series.length; i++) {
+            const ts = series[i].Timestamps;
+            if (ts.length === 0) {
+                indicies[i] = [-1, -1];
+                continue;
+            }
+
+            const t0 = ts[0];
+            const tn = ts[ts.length - 1];
+
+            if (t0 > hi || tn < lo) {
+                indicies[i] = [-1, -1];
+                continue;
+            }
+
+            const i0 = binarySearch(ts, 0, x => x >= lo);
+            const i1 = binarySearch(ts, ts.length, x => hi < x);
+
+            indicies[i] = [i0, i1];
+        }
+
+        this.opts.drawCallback(lo, hi, indicies, series);
     }
 
     private makeGraph(): typeof Dygraph {

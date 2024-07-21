@@ -15,7 +15,7 @@ export type GraphOptions = {
     };
     disableScroll?: boolean;
     date?: Date;
-    drawCallback?: (lo: number, hi: number) => void;
+    drawCallback?: (lo: number, hi: number, indices: [number, number][], series: Series[]) => void;
 };
 export declare class Graph {
     private readonly elem;

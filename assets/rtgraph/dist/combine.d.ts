@@ -14,6 +14,7 @@ export declare class Cache {
     private interleave;
     append(data: Series[]): void;
     getData(): DygraphRow[];
+    getSeries(): Series[];
     private detectOverlap;
     private mergeSingleSeries;
     private mergeAndAddGaps;
