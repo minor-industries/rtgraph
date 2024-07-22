@@ -1,5 +1,11 @@
 import { Series } from "./combine.js";
 import Dygraph from 'dygraphs';
+export type DrawCallbackArgs = {
+    lo: number;
+    hi: number;
+    indices: [number, number][];
+    series: Series[];
+};
 export type GraphOptions = {
     title: string;
     ylabel?: string;
@@ -15,7 +21,7 @@ export type GraphOptions = {
     };
     disableScroll?: boolean;
     date?: Date;
-    drawCallback?: (lo: number, hi: number, indices: [number, number][], series: Series[]) => void;
+    drawCallback?: (args: DrawCallbackArgs) => void;
 };
 export declare class Graph {
     private readonly elem;

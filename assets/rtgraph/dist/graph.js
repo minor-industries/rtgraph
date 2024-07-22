@@ -40,24 +40,24 @@ export class Graph {
         const lo = mapped[0];
         const hi = mapped[1];
         const series = this.cache.getSeries();
-        const indicies = new Array(series.length);
+        const indices = new Array(series.length);
         for (let i = 0; i < series.length; i++) {
             const ts = series[i].Timestamps;
             if (ts.length === 0) {
-                indicies[i] = [-1, -1];
+                indices[i] = [-1, -1];
                 continue;
             }
             const t0 = ts[0];
             const tn = ts[ts.length - 1];
             if (t0 > hi || tn < lo) {
-                indicies[i] = [-1, -1];
+                indices[i] = [-1, -1];
                 continue;
             }
             const i0 = binarySearch(ts, 0, x => x >= lo);
             const i1 = binarySearch(ts, ts.length, x => hi < x);
-            indicies[i] = [i0, i1];
+            indices[i] = [i0, i1];
         }
-        this.opts.drawCallback(lo, hi, indicies, series);
+        this.opts.drawCallback({ lo, hi, indices, series });
     }
     makeGraph() {
         let opts = {

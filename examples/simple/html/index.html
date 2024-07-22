@@ -64,17 +64,17 @@
                     }
                 },
                 maxGapMs: 1400,
-                drawCallback: (lo, hi, indices, series) => {
+                drawCallback: (args) => {
                     count++;
                     if (count % 25 !== 0) {
                         return;
                     }
 
                     console.log("=============");
-                    console.log(new Date(lo), new Date(hi));
-                    for (let i = 0; i < series.length; i++) {
-                        const ts = series[i].Timestamps;
-                        const [i0, i1] = indices[i];
+                    console.log(new Date(args.lo), new Date(args.hi));
+                    for (let i = 0; i < args.series.length; i++) {
+                        const ts = args.series[i].Timestamps;
+                        const [i0, i1] = args.indices[i];
                         if (i0 === -1) {
                             continue;
                         }
