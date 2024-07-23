@@ -12,7 +12,7 @@ export type GraphOptions = {
     seriesNames: string[];
     maxGapMs?: number;
     strokeWidth?: number;
-    windowSize?: number;
+    windowSize: number | null;
     includeZero?: boolean;
     height?: number;
     valueRange?: [number, number];
@@ -20,14 +20,14 @@ export type GraphOptions = {
         [key: string]: any;
     };
     disableScroll?: boolean;
-    date?: Date;
+    date: string | null;
     drawCallback?: (args: DrawCallbackArgs) => void;
 };
 export declare class Graph {
     private readonly elem;
     private readonly opts;
     private readonly numSeries;
-    private readonly windowSize?;
+    private readonly windowSize;
     dygraph: typeof Dygraph;
     private readonly cache;
     private readonly labels;

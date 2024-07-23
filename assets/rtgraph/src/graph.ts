@@ -32,13 +32,13 @@ export type GraphOptions = {
     seriesNames: string[];
     maxGapMs?: number;
     strokeWidth?: number;
-    windowSize?: number;
+    windowSize: number | null;
     includeZero?: boolean;
     height?: number;
     valueRange?: [number, number];
     series?: { [key: string]: any };
     disableScroll?: boolean;
-    date?: Date;
+    date: string | null;
     drawCallback?: (args: DrawCallbackArgs) => void;
 };
 
@@ -46,7 +46,7 @@ export class Graph {
     private readonly elem: HTMLElement;
     private readonly opts: GraphOptions;
     private readonly numSeries: number;
-    private readonly windowSize?: number;
+    private readonly windowSize: number | null;
     dygraph: typeof Dygraph;
     private readonly cache: Cache;
     private readonly labels: string[];
