@@ -19,7 +19,6 @@ func Get(filename string, errCh chan error) (*Backend, error) {
 	for _, table := range []any{
 		&Value{},
 		&Series{},
-		&RawValue{},
 	} {
 		err = db.AutoMigrate(table)
 		if err != nil {
