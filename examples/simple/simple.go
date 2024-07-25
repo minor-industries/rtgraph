@@ -34,6 +34,8 @@ func run() error {
 		return errors.Wrap(err, "get database")
 	}
 
+	go db.RunWriter(errCh)
+
 	graph, err := rtgraph.New(
 		db,
 		errCh,
