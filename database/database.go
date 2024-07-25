@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func Get(filename string, errCh chan error) (*Backend, error) {
+func Get(filename string) (*Backend, error) {
 	db, err := gorm.Open(sqlite.Open(filename), &gorm.Config{})
 	if err != nil {
 		return nil, errors.Wrap(err, "open")
@@ -26,7 +26,7 @@ func Get(filename string, errCh chan error) (*Backend, error) {
 		}
 	}
 
-	return NewBackend(db, errCh, 100), nil
+	return NewBackend(db, 100), nil
 }
 
 func RandomID() []byte {
@@ -68,7 +68,6 @@ type Backend struct {
 	db *gorm.DB
 
 	objects chan object
-	errCh   chan error
 }
 
 func (b *Backend) GetORM() *gorm.DB {
@@ -87,16 +86,12 @@ func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value floa
 
 func NewBackend(
 	db *gorm.DB,
-	errCh chan error,
 	bufSize int,
 ) *Backend {
 	b := &Backend{
 		db:      db,
 		objects: make(chan object, bufSize),
-		errCh:   errCh,
 	}
-
-	go b.RunWriter()
 
 	return b
 }

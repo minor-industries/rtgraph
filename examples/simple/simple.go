@@ -29,7 +29,7 @@ func run() error {
 		}
 	}
 
-	db, err := database.Get(dbPath, errCh)
+	db, err := database.Get(dbPath)
 	if err != nil {
 		return errors.Wrap(err, "get database")
 	}

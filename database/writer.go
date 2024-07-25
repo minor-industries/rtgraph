@@ -46,7 +46,7 @@ func (b *Backend) insert(objects []object) error {
 	return err
 }
 
-func (b *Backend) RunWriter() {
+func (b *Backend) RunWriter(errCh chan error) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 
 	var rows []object
@@ -64,7 +64,11 @@ func (b *Backend) RunWriter() {
 			rows = nil
 
 			if err != nil {
-				b.errCh <- errors.Wrap(err, "transaction")
+				err = errors.Wrap(err, "transaction")
+				if errCh == nil {
+					panic(err)
+				}
+				errCh <- err
 				return
 			}
 		}
