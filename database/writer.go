@@ -3,6 +3,7 @@ package database
 import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"time"
 )
 
@@ -31,7 +32,7 @@ func (b *Backend) insert(objects []object) error {
 			var res *gorm.DB
 			switch row.operation {
 			case "insert":
-				res = tx.Create(row.obj)
+				res = tx.Clauses(clause.OnConflict{DoNothing: true}).Create(row.obj)
 			case "save":
 				res = tx.Save(row.obj)
 			default:
