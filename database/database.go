@@ -20,6 +20,7 @@ func Get(filename string) (*Backend, error) {
 	for _, table := range []any{
 		&Sample{},
 		&Series{},
+		&Marker{},
 	} {
 		err = db.AutoMigrate(table)
 		if err != nil {
