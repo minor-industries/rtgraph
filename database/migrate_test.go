@@ -1,34 +1,46 @@
-package database
+package database_test
 
-//func TestMigrate(t *testing.T) {
-//	errCh := make(chan error)
-//
-//	db, err := Get(os.ExpandEnv("$HOME/.z2/z2.db"), errCh)
-//	require.NoError(t, err)
-//
-//	fmt.Println(time.UnixMilli(1717791885643))
-//
-//	for {
-//		var rows []Sample
-//		orm := db.GetORM()
-//		tx := orm.Where("timestamp_milli is null").Limit(100).Find(&rows)
-//		require.NoError(t, tx.Error)
-//
-//		fmt.Println(len(rows))
-//		if len(rows) == 0 {
-//			break
-//		}
-//
-//		err = orm.Transaction(func(tx *gorm.DB) error {
-//			for _, row := range rows {
-//				row.TimestampMilli = sql.NullInt64{
-//					Int64: row.Timestamp.UnixMilli(),
-//					Valid: true,
-//				}
-//				tx.Save(row)
-//			}
-//			return nil
-//		})
-//		require.NoError(t, err)
-//	}
-//}
+import (
+	"fmt"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
+)
+
+type Sample struct {
+	Id          []byte `gorm:"primaryKey"`
+	SeriesID    []byte
+	Timestamp   time.Time
+	Value       float64
+	TimestampMS int64
+}
+
+func TestUpdateTimestampMS(t *testing.T) {
+	t.Skip()
+	db, err := gorm.Open(sqlite.Open(os.ExpandEnv("$HOME/z2.db")), &gorm.Config{})
+	require.NoError(t, err)
+
+	err = db.AutoMigrate(&Sample{})
+	require.NoError(t, err)
+
+	var samples []Sample
+	err = db.Find(&samples).Error
+	fmt.Println(len(samples))
+	require.NoError(t, err)
+
+	tx := db.Begin()
+	require.NoError(t, tx.Error)
+
+	for i, sample := range samples {
+		samples[i].TimestampMS = sample.Timestamp.UnixMilli()
+		err = tx.Save(&samples[i]).Error
+		require.NoError(t, err)
+	}
+
+	err = tx.Commit().Error
+	require.NoError(t, err)
+}
