@@ -17,7 +17,7 @@ func Get(filename string) (*Backend, error) {
 	}
 
 	for _, table := range []any{
-		&Value{},
+		&Sample{},
 		&Series{},
 	} {
 		err = db.AutoMigrate(table)
@@ -75,7 +75,7 @@ func (b *Backend) GetORM() *gorm.DB {
 }
 
 func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
-	b.Insert(&Value{
+	b.Insert(&Sample{
 		ID:        RandomID(),
 		Timestamp: timestamp.UnixMilli(),
 		Value:     value,
@@ -124,7 +124,7 @@ func (b *Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Ser
 }
 
 func (b *Backend) loadDataWindow(seriesName string, query *gorm.DB) (schema.Series, error) {
-	var rows []Value
+	var rows []Sample
 
 	tx := query.Order("timestamp asc").Find(&rows)
 

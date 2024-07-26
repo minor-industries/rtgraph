@@ -9,7 +9,7 @@ package database
 //	fmt.Println(time.UnixMilli(1717791885643))
 //
 //	for {
-//		var rows []Value
+//		var rows []Sample
 //		orm := db.GetORM()
 //		tx := orm.Where("timestamp_milli is null").Limit(100).Find(&rows)
 //		require.NoError(t, tx.Error)

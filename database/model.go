@@ -1,6 +1,6 @@
 package database
 
-type Value struct {
+type Sample struct {
 	ID        []byte `gorm:"primary_key"`
 	Timestamp int64  `gorm:"index;not null"`
 	Value     float64
