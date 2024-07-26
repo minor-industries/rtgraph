@@ -63,25 +63,7 @@
                         strokeWidth: 1,
                     }
                 },
-                maxGapMs: 1400,
-                drawCallback: (args) => {
-                    count++;
-                    if (count % 25 !== 0) {
-                        return;
-                    }
-
-                    console.log("=============");
-                    console.log(new Date(args.lo), new Date(args.hi));
-                    for (let i = 0; i < args.series.length; i++) {
-                        const ts = args.series[i].Timestamps;
-                        const [i0, i1] = args.indices[i];
-                        if (i0 === -1) {
-                            continue;
-                        }
-                        console.log(i0, i1)
-                        console.log(new Date(ts[i0]), new Date(ts[i1 - 1]));
-                    }
-                },
+                maxGapMs: 1400
             });
         });
     </script>

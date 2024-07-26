@@ -83,10 +83,9 @@ func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value floa
 	}
 
 	b.Insert(&Sample{
-		ID:        RandomID(),
+		SeriesID:  HashedID(seriesName),
 		Timestamp: timestamp.UnixMilli(),
 		Value:     value,
-		SeriesID:  HashedID(seriesName),
 	})
 	return nil
 }

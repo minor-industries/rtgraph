@@ -1,10 +1,9 @@
 package database
 
 type Sample struct {
-	ID        []byte `gorm:"primary_key"`
-	Timestamp int64  `gorm:"index;not null"`
+	SeriesID  []byte `gorm:"primaryKey;index"`
+	Timestamp int64  `gorm:"primaryKey;index"`
 	Value     float64
-	SeriesID  []byte `gorm:"index;not null"`
 }
 
 type Series struct {
