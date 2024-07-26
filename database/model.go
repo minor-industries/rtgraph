@@ -1,8 +1,8 @@
 package database
 
 type Sample struct {
-	SeriesID  []byte `gorm:"primaryKey;index"`
-	Timestamp int64  `gorm:"primaryKey;index"`
+	SeriesID  []byte `gorm:"primaryKey"`
+	Timestamp int64  `gorm:"primaryKey"`
 	Value     float64
 }
 
