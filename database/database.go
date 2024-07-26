@@ -3,6 +3,7 @@ package database
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
@@ -68,6 +69,7 @@ type Backend struct {
 	db *gorm.DB
 
 	objects chan object
+	seen    set.Set[string]
 }
 
 func (b *Backend) GetORM() *gorm.DB {
@@ -75,6 +77,11 @@ func (b *Backend) GetORM() *gorm.DB {
 }
 
 func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
+	if !b.seen.Has(seriesName) {
+		//fmt.Println("series", strings.ToUpper(hex.EncodeToString(HashedID(seriesName))), seriesName)
+		b.seen.Add(seriesName)
+	}
+
 	b.Insert(&Sample{
 		ID:        RandomID(),
 		Timestamp: timestamp.UnixMilli(),
@@ -91,6 +98,7 @@ func NewBackend(
 	b := &Backend{
 		db:      db,
 		objects: make(chan object, bufSize),
+		seen:    set.FromSlice([]string{}),
 	}
 
 	return b
