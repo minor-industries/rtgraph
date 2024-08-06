@@ -1,4 +1,6 @@
-package database_test
+//go:build !wasm
+
+package sqlite
 
 import (
 	"fmt"

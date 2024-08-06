@@ -1,4 +1,6 @@
-package database
+//go:build !wasm
+
+package sqlite
 
 type Sample struct {
 	SeriesID  []byte `gorm:"primaryKey"`
