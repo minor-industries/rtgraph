@@ -7,28 +7,46 @@ import (
 	"time"
 )
 
-type Db struct{}
+type Backend struct{}
 
-func (d Db) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
+func (d Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
 	panic("not implemented")
 }
 
-func (d Db) LoadDate(seriesName string, date string) (schema.Series, error) {
+func (d Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
 	panic("not implemented")
 }
 
-func (d Db) CreateSeries(seriesNames []string) error {
+func (d Backend) CreateSeries(seriesNames []string) error {
 	panic("not implemented")
 }
 
-func (d Db) InsertValue(seriesName string, timestamp time.Time, value float64) error {
+func (d Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
 	panic("not implemented")
 }
 
-func (d Db) RunWriter(chan error) error {
+func Get(string) (Backend, error) {
 	panic("not implemented")
 }
 
-func Get(string) (Db, error) {
+type ORM struct{}
+
+type TX struct {
+	Error error
+}
+
+func (o ORM) Find(any) TX {
+	panic("not implemented")
+}
+
+func (d Backend) RunWriter(chan error) error {
+	panic("not implemented")
+}
+
+func (d Backend) GetORM() ORM {
+	panic("not implemented")
+}
+
+func (d Backend) Save(any) ORM {
 	panic("not implemented")
 }

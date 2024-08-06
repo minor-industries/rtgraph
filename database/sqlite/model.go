@@ -1,5 +1,3 @@
-//go:build !wasm
-
 package sqlite
 
 type Sample struct {

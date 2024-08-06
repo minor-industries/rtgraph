@@ -4,7 +4,6 @@ package sqlite
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
@@ -39,15 +38,6 @@ func RandomID() []byte {
 	if err != nil {
 		panic(err)
 	}
-	return result[:]
-}
-
-func HashedID(s string) []byte {
-	var result [16]byte
-	h := sha256.New()
-	h.Write([]byte(s))
-	sum := h.Sum(nil)
-	copy(result[:], sum[:16])
 	return result[:]
 }
 
