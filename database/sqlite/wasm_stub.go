@@ -50,3 +50,7 @@ func (d Backend) GetORM() ORM {
 func (d Backend) Save(any) ORM {
 	panic("not implemented")
 }
+
+func (d Backend) Insert(any) ORM {
+	panic("not implemented")
+}

@@ -3,7 +3,6 @@
 package sqlite
 
 import (
-	"crypto/rand"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
@@ -30,15 +29,6 @@ func Get(filename string) (*Backend, error) {
 	}
 
 	return NewBackend(db, 100), nil
-}
-
-func RandomID() []byte {
-	var result [16]byte
-	_, err := rand.Read(result[:])
-	if err != nil {
-		panic(err)
-	}
-	return result[:]
 }
 
 func loadSeries(db *gorm.DB) (map[string]*Series, error) {
