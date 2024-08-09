@@ -22,6 +22,7 @@ export type GraphOptions = {
     disableScroll?: boolean;
     date: string | null;
     drawCallback?: (args: DrawCallbackArgs) => void;
+    connect?: boolean;
 };
 export declare class Graph {
     private readonly elem;

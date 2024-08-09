@@ -23,13 +23,28 @@ export class Graph {
         this.windowSize = this.opts.windowSize;
         this.t0Server = undefined;
         this.t0Client = undefined;
+        if (this.opts.connect === undefined) {
+            this.opts.connect = true;
+        }
         const labels = ["x"];
         for (let i = 0; i < this.numSeries; i++) {
             labels.push(`y${i + 1}`);
         }
         this.labels = labels;
         this.dygraph = this.makeGraph();
-        this.connect();
+        if (this.opts.connect) {
+            this.connect();
+        }
+        else {
+            this.setDate(new Date());
+            setInterval(() => {
+                this.update([{
+                        Pos: 0,
+                        Timestamps: [new Date().getTime()],
+                        Values: [12.0],
+                    }]);
+            }, 1000);
+        }
     }
     onDraw(g) {
         if (!this.opts.drawCallback) {

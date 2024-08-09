@@ -9064,13 +9064,27 @@ var Graph = class {
     this.windowSize = this.opts.windowSize;
     this.t0Server = void 0;
     this.t0Client = void 0;
+    if (this.opts.connect === void 0) {
+      this.opts.connect = true;
+    }
     const labels = ["x"];
     for (let i = 0; i < this.numSeries; i++) {
       labels.push(`y${i + 1}`);
     }
     this.labels = labels;
     this.dygraph = this.makeGraph();
-    this.connect();
+    if (this.opts.connect) {
+      this.connect();
+    } else {
+      this.setDate(/* @__PURE__ */ new Date());
+      setInterval(() => {
+        this.update([{
+          Pos: 0,
+          Timestamps: [(/* @__PURE__ */ new Date()).getTime()],
+          Values: [12]
+        }]);
+      }, 1e3);
+    }
   }
   onDraw(g) {
     if (!this.opts.drawCallback) {
