@@ -9077,13 +9077,6 @@ var Graph = class {
       this.connect();
     } else {
       this.setDate(/* @__PURE__ */ new Date());
-      setInterval(() => {
-        this.update([{
-          Pos: 0,
-          Timestamps: [(/* @__PURE__ */ new Date()).getTime()],
-          Values: [12]
-        }]);
-      }, 1e3);
     }
   }
   onDraw(g) {

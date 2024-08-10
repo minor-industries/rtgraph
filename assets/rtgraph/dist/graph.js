@@ -37,13 +37,6 @@ export class Graph {
         }
         else {
             this.setDate(new Date());
-            setInterval(() => {
-                this.update([{
-                        Pos: 0,
-                        Timestamps: [new Date().getTime()],
-                        Values: [12.0],
-                    }]);
-            }, 1000);
         }
     }
     onDraw(g) {
