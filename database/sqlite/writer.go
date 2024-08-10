@@ -1,4 +1,6 @@
-package database
+//go:build !wasm
+
+package sqlite
 
 import (
 	"github.com/pkg/errors"

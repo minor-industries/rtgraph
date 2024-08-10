@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph"
-	"github.com/minor-industries/rtgraph/database"
+	"github.com/minor-industries/rtgraph/database/sqlite"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
 	"io/fs"
@@ -29,7 +29,7 @@ func run() error {
 		}
 	}
 
-	db, err := database.Get(dbPath)
+	db, err := sqlite.Get(dbPath)
 	if err != nil {
 		return errors.Wrap(err, "get database")
 	}

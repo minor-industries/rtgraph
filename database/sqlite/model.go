@@ -1,4 +1,4 @@
-package database
+package sqlite
 
 type Sample struct {
 	SeriesID  []byte `gorm:"primaryKey"`

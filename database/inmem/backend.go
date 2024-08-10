@@ -11,6 +11,11 @@ type Backend struct {
 	values map[string][]schema.Value
 }
 
+func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewBackend() *Backend {
 	return &Backend{
 		values: map[string][]schema.Value{},
