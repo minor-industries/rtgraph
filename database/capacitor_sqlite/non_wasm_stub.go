@@ -1,1 +1,0 @@
-package capacitor_sqlite
