@@ -8,39 +8,36 @@ import (
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/subscription"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
 	"net/http"
 	"nhooyr.io/websocket"
 	"time"
 )
 
-func (g *Graph) setupServer() error {
-	r := g.server
+func (g *Graph) SetupServer(rg *gin.RouterGroup) {
+	g.staticFiles(rg, assets.FS,
+		"dygraph.min.js", "application/javascript",
+		"dygraph.min.js.map", "application/javascript",
+		"dygraph.css", "text/css",
 
-	g.StaticFiles(assets.FS,
-		"rtgraph/dygraph.min.js", "application/javascript",
-		"rtgraph/dygraph.min.js.map", "application/javascript",
-		"rtgraph/dygraph.css", "text/css",
+		"msgpack.min.js", "application/javascript",
 
-		"rtgraph/msgpack.min.js", "application/javascript",
+		"dist/rtgraph.js", "application/javascript",
+		"dist/rtgraph.min.js", "application/javascript",
+		"dist/combine.js", "application/javascript",
+		"rtgraph.css", "text/css",
 
-		"rtgraph/dist/rtgraph.js", "application/javascript",
-		"rtgraph/dist/rtgraph.min.js", "application/javascript",
-		"rtgraph/dist/combine.js", "application/javascript",
-		"rtgraph/rtgraph.css", "text/css",
+		"purecss/base-min.css", "text/css",
+		"purecss/grids-min.css", "text/css",
+		"purecss/grids-responsive-min.css", "text/css",
+		"purecss/pure-min.css", "text/css",
 
-		"rtgraph/purecss/base-min.css", "text/css",
-		"rtgraph/purecss/grids-min.css", "text/css",
-		"rtgraph/purecss/grids-responsive-min.css", "text/css",
-		"rtgraph/purecss/pure-min.css", "text/css",
-
-		"rtgraph/purecss/base.css", "text/css",
-		"rtgraph/purecss/grids.css", "text/css",
-		"rtgraph/purecss/grids-responsive.css", "text/css",
+		"purecss/base.css", "text/css",
+		"purecss/grids.css", "text/css",
+		"purecss/grids-responsive.css", "text/css",
 	)
 
-	r.GET("/ws", func(c *gin.Context) {
+	rg.GET("/ws", func(c *gin.Context) {
 		ctx := c.Request.Context()
 
 		conn, wsErr := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
@@ -87,28 +84,16 @@ func (g *Graph) setupServer() error {
 			}
 		}
 	})
-
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
-	return nil
 }
 
-func (g *Graph) RunServer(address string) error {
-	if err := g.server.Run(address); err != nil {
-		return errors.Wrap(err, "run")
-	}
-	return nil
-}
-
-func (g *Graph) StaticFiles(fsys fs.FS, files ...string) {
+func (g *Graph) staticFiles(rg *gin.RouterGroup, fsys fs.FS, files ...string) {
 	for i := 0; i < len(files); i += 2 {
 		name := files[i]
 		ct := files[i+1]
-		path := "/" + name
-		g.server.GET(path, func(c *gin.Context) {
+		rg.GET(name, func(c *gin.Context) {
 			header := c.Writer.Header()
 			header["Content-Type"] = []string{ct}
-			content, err := fs.ReadFile(fsys, name)
+			content, err := fs.ReadFile(fsys, "rtgraph/"+name)
 			if err != nil {
 				c.Status(404)
 				return

@@ -244,7 +244,7 @@ export class Graph {
     }
 
     private connect() {
-        const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
+        const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
         const ws = new WebSocket(url);
         ws.binaryType = "arraybuffer";
 

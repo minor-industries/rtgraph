@@ -2,7 +2,6 @@ package rtgraph
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/computed_series"
 	"github.com/minor-industries/rtgraph/messages"
@@ -18,7 +17,6 @@ type Graph struct {
 	errCh       chan error
 
 	broker *broker.Broker
-	server *gin.Engine
 	db     storage.StorageBackend
 	Parser *computed_series.Parser
 }
@@ -40,21 +38,11 @@ func New(
 
 	br := broker.NewBroker()
 
-	server := gin.New()
-	server.Use(gin.Recovery())
-	skipLogging := []string{"/metrics"}
-	server.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogging...))
-
 	g := &Graph{
 		broker: br,
 		db:     backend,
 		errCh:  errCh,
-		server: server,
 		Parser: computed_series.NewParser(),
-	}
-
-	if err := g.setupServer(); err != nil {
-		return nil, errors.Wrap(err, "setup server")
 	}
 
 	if !opts.DisablePrometheusMetrics {
@@ -65,10 +53,6 @@ func New(
 	//go g.monitorDrops()
 
 	return g, nil
-}
-
-func (g *Graph) GetEngine() *gin.Engine {
-	return g.server
 }
 
 func (g *Graph) CreateValue(

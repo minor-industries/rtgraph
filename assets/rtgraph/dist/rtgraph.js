@@ -9201,7 +9201,7 @@ var Graph = class {
     return lastPoint[0].getTime();
   }
   connect() {
-    const url = `ws://${window.location.hostname}:${window.location.port}/ws`;
+    const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
     const ws = new WebSocket(url);
     ws.binaryType = "arraybuffer";
     ws.onmessage = (message) => {

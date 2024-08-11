@@ -6,6 +6,7 @@ import (
 	"github.com/minor-industries/rtgraph/database/sqlite"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
 	"math/rand"
 	"net/http"
@@ -49,11 +50,20 @@ func run() error {
 		return errors.Wrap(err, "new graph")
 	}
 
-	graph.GetEngine().GET("/", func(c *gin.Context) {
-		c.Redirect(http.StatusTemporaryRedirect, "index.html")
+	router := gin.New()
+	router.Use(gin.Recovery())
+	skipLogging := []string{"/metrics"}
+	router.Use(gin.LoggerWithWriter(gin.DefaultWriter, skipLogging...))
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/favicon.ico", func(c *gin.Context) {
+		c.Status(204)
 	})
 
-	graph.StaticFiles(html.FS, "index.html", "text/html")
+	router.GET("/", func(c *gin.Context) {
+		c.FileFromFS("main.html", http.FS(html.FS))
+	})
+
+	graph.SetupServer(router.Group("/rtgraph"))
 
 	go func() {
 		ticker := time.NewTicker(1000 * time.Millisecond)
@@ -86,7 +96,7 @@ func run() error {
 	}()
 
 	go func() {
-		errCh <- graph.RunServer("0.0.0.0:8000")
+		errCh <- router.Run("0.0.0.0:8000")
 	}()
 
 	return <-errCh
