@@ -51,6 +51,10 @@ func (dmw *DatabaseManagerWrapper) LoadDate(seriesName string, date string) (sch
 }
 
 func (dmw *DatabaseManagerWrapper) CreateSeries(seriesNames []string) error {
+	if len(seriesNames) == 0 {
+		return nil
+	}
+
 	jsArray := js.ValueOf(seriesNames)
 	promise := dmw.dbManager.Call("createSeries", jsArray)
 
