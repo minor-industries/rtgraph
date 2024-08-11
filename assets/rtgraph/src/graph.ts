@@ -43,6 +43,13 @@ export type GraphOptions = {
     connect?: boolean;
 };
 
+export type SubscriptionRequest = {
+    series: string[]
+    windowSize?: number,
+    lastPointMs?: number,
+    date: string | null,
+}
+
 export class Graph {
     private readonly elem: HTMLElement;
     private readonly opts: GraphOptions;
@@ -243,6 +250,16 @@ export class Graph {
         return lastPoint[0].getTime();
     }
 
+    subscriptionRequest(): SubscriptionRequest {
+        let lastPointMs = this.getLastTimestamp();
+        return {
+            series: this.opts.seriesNames,
+            windowSize: this.windowSize || 0,
+            lastPointMs: lastPointMs,
+            date: this.opts.date
+        }
+    }
+
     private connect() {
         const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
         const ws = new WebSocket(url);
@@ -278,14 +295,7 @@ export class Graph {
         ws.onopen = event => {
             setTimeout(() => {
                 let lastPointMs = this.getLastTimestamp();
-                ws.send(JSON.stringify({
-                        series: this.opts.seriesNames,
-                        windowSize: this.windowSize || 0,
-                        lastPointMs: lastPointMs,
-                        maxGapMs: this.opts.maxGapMs || 60 * 1000, // 60 seconds in ms
-                        date: this.opts.date
-                    }
-                ));
+                ws.send(JSON.stringify(this.subscriptionRequest()));
             })
         }
 

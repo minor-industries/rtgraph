@@ -24,6 +24,12 @@ export type GraphOptions = {
     drawCallback?: (args: DrawCallbackArgs) => void;
     connect?: boolean;
 };
+export type SubscriptionRequest = {
+    series: string[];
+    windowSize?: number;
+    lastPointMs?: number;
+    date: string | null;
+};
 export declare class Graph {
     private readonly elem;
     private readonly opts;
@@ -44,6 +50,7 @@ export declare class Graph {
     private setDate;
     private scroll;
     private getLastTimestamp;
+    subscriptionRequest(): SubscriptionRequest;
     private connect;
     private reconnect;
 }
