@@ -4,14 +4,10 @@ package capacitor_sqlite
 
 import (
 	"fmt"
+	"github.com/minor-industries/rtgraph/schema"
 	"syscall/js"
 	"time"
 )
-
-type Value struct {
-	Timestamp time.Time
-	Value     float64
-}
 
 type DatabaseManagerWrapper struct {
 	dbManager js.Value
@@ -24,29 +20,34 @@ func NewDatabaseManagerWrapper(dbManager js.Value) (*DatabaseManagerWrapper, err
 	return &DatabaseManagerWrapper{dbManager: dbManager}, nil
 }
 
-func (dmw *DatabaseManagerWrapper) LoadDataWindow(seriesName string, start time.Time) ([]Value, error) {
+func (dmw *DatabaseManagerWrapper) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
 	promise := dmw.dbManager.Call("loadDataWindow", seriesName, start.Unix())
 
-	result := await(promise)
-	if !result.Truthy() {
-		return nil, fmt.Errorf("failed to load data window")
+	dbResult := await(promise)
+	if !dbResult.Truthy() {
+		return schema.Series{}, fmt.Errorf("failed to load data window")
 	}
 
-	rows := result.Get("rows")
-	values := make([]Value, rows.Length())
+	rows := dbResult.Get("rows")
+	result := schema.Series{
+		SeriesName: seriesName,
+	}
+	result.Values = make([]schema.Value, rows.Length())
+
 	for i := 0; i < rows.Length(); i++ {
 		row := rows.Index(i)
-		values[i] = Value{
+		result.Values[i] = schema.Value{
 			Timestamp: time.UnixMilli(int64(row.Get("Timestamp").Int())),
 			Value:     row.Get("Value").Float(),
 		}
 	}
-	return values, nil
+
+	return result, nil
 }
 
-func (dmw *DatabaseManagerWrapper) LoadDate(seriesName string, date string) ([]Value, error) {
+func (dmw *DatabaseManagerWrapper) LoadDate(seriesName string, date string) (schema.Series, error) {
 	// Implement based on the structure of the DatabaseManager
-	return nil, fmt.Errorf("LoadDate is not implemented")
+	return schema.Series{}, fmt.Errorf("LoadDate is not implemented")
 }
 
 func (dmw *DatabaseManagerWrapper) CreateSeries(seriesNames []string) error {
