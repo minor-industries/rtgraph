@@ -1,17 +1,18 @@
-package rtgraph
+package prom
 
 import (
 	"github.com/minor-industries/platform/common/metrics"
+	"github.com/minor-industries/rtgraph/broker"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"time"
 )
 
-func (g *Graph) publishPrometheusMetrics() {
+func PublishPrometheusMetrics(broker *broker.Broker, errCh chan error) {
 	metricMap := map[string]*metrics.TimeoutGauge{}
 
-	msgCh := g.broker.Subscribe()
+	msgCh := broker.Subscribe()
 
 	for message := range msgCh {
 		switch m := message.(type) {
@@ -24,7 +25,7 @@ func (g *Graph) publishPrometheusMetrics() {
 				metricMap[fullName] = tg
 				err := prometheus.Register(tg.G)
 				if err != nil {
-					g.errCh <- errors.Wrap(err, "register prometheus metric")
+					errCh <- errors.Wrap(err, "register prometheus metric")
 				}
 			}
 

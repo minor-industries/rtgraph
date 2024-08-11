@@ -5,6 +5,7 @@ import (
 	"github.com/minor-industries/rtgraph"
 	"github.com/minor-industries/rtgraph/database/sqlite"
 	"github.com/minor-industries/rtgraph/examples/simple/html"
+	"github.com/minor-industries/rtgraph/prom"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/fs"
@@ -40,7 +41,9 @@ func run() error {
 	graph, err := rtgraph.New(
 		db,
 		errCh,
-		rtgraph.Opts{},
+		rtgraph.Opts{
+			ExternalMetrics: prom.PublishPrometheusMetrics,
+		},
 		[]string{
 			"sample1",
 			"sample2",

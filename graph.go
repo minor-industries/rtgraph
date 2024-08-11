@@ -22,7 +22,7 @@ type Graph struct {
 }
 
 type Opts struct {
-	DisablePrometheusMetrics bool
+	ExternalMetrics func(broker *broker.Broker, errCh chan error)
 }
 
 func New(
@@ -45,8 +45,8 @@ func New(
 		Parser: computed_series.NewParser(),
 	}
 
-	if !opts.DisablePrometheusMetrics {
-		go g.publishPrometheusMetrics()
+	if opts.ExternalMetrics != nil {
+		go opts.ExternalMetrics(g.broker, errCh)
 	}
 	go g.publishToDB()
 	go br.Start()
