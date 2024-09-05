@@ -87,7 +87,9 @@ func NewBackend(
 }
 
 func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
-	t1, err := time.ParseInLocation("2006-01-02", date, time.UTC)
+	// TODO: this should be much better at handling different timezones
+
+	t1, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		return schema.Series{}, errors.Wrap(err, "parse date")
 	}
