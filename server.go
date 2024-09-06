@@ -7,7 +7,6 @@ import (
 	"github.com/minor-industries/rtgraph/assets"
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/subscription"
-	"github.com/pkg/errors"
 	"io/fs"
 	"net/http"
 	"nhooyr.io/websocket"
@@ -38,13 +37,15 @@ func (g *Graph) SetupServer(rg *gin.RouterGroup) {
 	)
 
 	rg.GET("/ws", func(c *gin.Context) {
+		// TODO: need to think through client disconnection
+
 		ctx := c.Request.Context()
 
-		conn, wsErr := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
+		conn, err := websocket.Accept(c.Writer, c.Request, &websocket.AcceptOptions{
 			InsecureSkipVerify: true,
 		})
-		if wsErr != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, wsErr)
+		if err != nil {
+			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -53,7 +54,7 @@ func (g *Graph) SetupServer(rg *gin.RouterGroup) {
 		}()
 
 		_, reqBytes, err := conn.Read(ctx)
-		if wsErr != nil {
+		if err != nil {
 			fmt.Println("ws read error", err.Error())
 			return
 		}
@@ -61,8 +62,8 @@ func (g *Graph) SetupServer(rg *gin.RouterGroup) {
 
 		var req subscription.Request
 		err = json.Unmarshal(reqBytes, &req)
-		if wsErr != nil {
-			fmt.Println("ws error", errors.Wrap(err, "unmarshal json"))
+		if err != nil {
+			fmt.Println("ws error", err.Error())
 			return
 		}
 
@@ -70,16 +71,20 @@ func (g *Graph) SetupServer(rg *gin.RouterGroup) {
 
 		now := time.Now()
 
-		go g.Subscribe(&req, now, msgCh)
+		go func() {
+			g.Subscribe(&req, now, msgCh)
+			close(msgCh)
+		}()
 
 		for data := range msgCh {
 			binmsg, err := data.MarshalMsg(nil)
 			if err != nil {
-				panic(errors.Wrap(err, "marshal msg")) // TODO
+				fmt.Println("marshal msg error", err)
+				return
 			}
 
 			if err := conn.Write(ctx, websocket.MessageBinary, binmsg); err != nil {
-				fmt.Println(errors.Wrap(err, "write binary to websocket"))
+				fmt.Println("write binary to websocket error", err)
 				return
 			}
 		}
