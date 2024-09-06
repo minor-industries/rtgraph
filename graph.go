@@ -96,7 +96,6 @@ func (g *Graph) Subscribe(
 		g.db,
 		g.broker,
 		msgCh,
-		req,
 		start,
 	)
 }

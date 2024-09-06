@@ -15,6 +15,7 @@ type Subscription struct {
 	lastSeen    map[int]time.Time // for each position
 	inputSeries []string
 	operators   []computed_series.Operator
+	req         *Request
 }
 
 func NewSubscription(
@@ -23,6 +24,7 @@ func NewSubscription(
 	start time.Time,
 ) (*Subscription, error) {
 	sub := &Subscription{
+		req:         req,
 		lastSeen:    map[int]time.Time{},
 		operators:   make([]computed_series.Operator, len(req.Series)),
 		inputSeries: make([]string, len(req.Series)),
@@ -42,15 +44,14 @@ func NewSubscription(
 
 func (sub *Subscription) getInitialData(
 	db storage.StorageBackend,
-	req *Request,
 	start time.Time,
 ) (*messages.Data, error) {
 	allSeries := make([][]schema.Value, len(sub.operators))
 	for idx, op := range sub.operators {
 		var window schema.Series
 		var err error
-		if req.Date != "" {
-			window, err = db.LoadDate(sub.inputSeries[idx], req.Date)
+		if sub.req.Date != "" {
+			window, err = db.LoadDate(sub.inputSeries[idx], sub.req.Date)
 		} else {
 			var lookback time.Duration = 0
 			if wo, ok := op.(computed_series.WindowedOperator); ok {
@@ -108,10 +109,9 @@ func (sub *Subscription) Run(
 	db storage.StorageBackend,
 	broker *broker.Broker,
 	msgCh chan *messages.Data,
-	req *Request,
 	start time.Time,
 ) {
-	initialData, err := sub.getInitialData(db, req, start)
+	initialData, err := sub.getInitialData(db, start)
 	if err != nil {
 		msgCh <- &messages.Data{
 			Error: errors.Wrap(err, "get initial data").Error(),
@@ -127,6 +127,21 @@ func (sub *Subscription) produceAllSeries(
 	broker *broker.Broker,
 	outMsg chan *messages.Data,
 ) {
+	var cutoffTime int64
+	if sub.req.Date != "" {
+		// if date given, we want to stop streaming points that are after this date
+		t, err := time.ParseInLocation("2006-01-02", sub.req.Date, time.Local)
+		if err != nil {
+			outMsg <- &messages.Data{
+				Error: errors.Wrap(err, "parse date").Error(),
+			}
+			close(outMsg)
+			return
+		}
+		t = t.AddDate(0, 0, 1)
+		cutoffTime = t.UnixMilli()
+	}
+
 	msgCh := broker.Subscribe()
 	defer broker.Unsubscribe(msgCh)
 
@@ -144,16 +159,26 @@ func (sub *Subscription) produceAllSeries(
 			for _, idx := range out {
 				op := sub.operators[idx]
 				series := op.ProcessNewValues(msg.Values)
+
 				if len(series) == 0 {
 					continue
 				}
 
-				timestamps := make([]int64, len(series))
-				values := make([]float64, len(series))
+				timestamps := make([]int64, 0, len(series))
+				values := make([]float64, 0, len(series))
 
-				for i, s := range series {
-					timestamps[i] = s.Timestamp.UnixMilli()
-					values[i] = s.Value
+				for _, s := range series {
+					ts := s.Timestamp.UnixMilli()
+					if cutoffTime > 0 && ts >= cutoffTime {
+						continue
+					}
+
+					timestamps = append(timestamps, ts)
+					values = append(values, s.Value)
+				}
+
+				if len(timestamps) == 0 {
+					continue
 				}
 
 				data.Series = append(data.Series, messages.Series{
