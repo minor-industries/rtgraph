@@ -33,8 +33,16 @@ func printKeys(jsObject js.Value) {
 }
 
 func (dmw *DatabaseManagerWrapper) LoadDataAfter(seriesName string, start time.Time) (schema.Series, error) {
-	promise := dmw.dbManager.Call("loadDataWindow", seriesName, start.UnixMilli())
+	promise := dmw.dbManager.Call("loadDataAfter", seriesName, start.UnixMilli())
+	return dmw.loadData(promise, seriesName)
+}
 
+func (dmw *DatabaseManagerWrapper) LoadDataBetween(seriesName string, start, end time.Time) (schema.Series, error) {
+	promise := dmw.dbManager.Call("loadDataBetween", seriesName, start.UnixMilli(), end.UnixMilli())
+	return dmw.loadData(promise, seriesName)
+}
+
+func (dmw *DatabaseManagerWrapper) loadData(promise js.Value, seriesName string) (schema.Series, error) {
 	dbResult := await(promise)
 	//fmt.Println("DB Result received:", dbResult.Length())
 
@@ -59,11 +67,6 @@ func (dmw *DatabaseManagerWrapper) LoadDataAfter(seriesName string, start time.T
 	}
 
 	return result, nil
-}
-
-func (dmw *DatabaseManagerWrapper) LoadDataBetween(seriesName string, start, end time.Time) (schema.Series, error) {
-	// Implement based on the structure of the DatabaseManager
-	return schema.Series{}, fmt.Errorf("LoadDataBetween is not implemented")
 }
 
 func (dmw *DatabaseManagerWrapper) CreateSeries(seriesNames []string) error {
