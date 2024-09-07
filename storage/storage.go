@@ -6,14 +6,15 @@ import (
 )
 
 type StorageBackend interface {
-	LoadDataWindow(
+	LoadDataAfter(
 		seriesName string,
 		start time.Time,
 	) (schema.Series, error)
 
-	LoadDate(
+	LoadDataBetween(
 		seriesName string,
-		date string,
+		start time.Time,
+		end time.Time,
 	) (schema.Series, error)
 
 	CreateSeries(

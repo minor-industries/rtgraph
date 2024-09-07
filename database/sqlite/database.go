@@ -86,25 +86,18 @@ func NewBackend(
 	return b
 }
 
-func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
-	// TODO: this should handle more cases than just local time
-	t1, err := time.ParseInLocation("2006-01-02", date, time.Local)
-	if err != nil {
-		return schema.Series{}, errors.Wrap(err, "parse date")
-	}
-	t2 := t1.AddDate(0, 0, 1)
-
+func (b *Backend) LoadDataBetween(seriesName string, start, end time.Time) (schema.Series, error) {
 	q := b.db.Where(
 		"series_id = ? and timestamp >= ? and timestamp < ?",
 		HashedID(seriesName),
-		t1.UnixMilli(),
-		t2.UnixMilli(),
+		start.UnixMilli(),
+		end.UnixMilli(),
 	)
 
 	return b.loadDataWindow(seriesName, q)
 }
 
-func (b *Backend) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
+func (b *Backend) LoadDataAfter(seriesName string, start time.Time) (schema.Series, error) {
 	q := b.db.Where(
 		"series_id = ? and timestamp >= ?",
 		HashedID(seriesName),

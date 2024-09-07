@@ -11,7 +11,11 @@ type Backend struct {
 	values map[string][]schema.Value
 }
 
-func (b *Backend) LoadDate(seriesName string, date string) (schema.Series, error) {
+func (b *Backend) LoadDataBetween(
+	seriesName string,
+	start time.Time,
+	end time.Time,
+) (schema.Series, error) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -22,7 +26,7 @@ func NewBackend() *Backend {
 	}
 }
 
-func (b *Backend) LoadDataWindow(
+func (b *Backend) LoadDataAfter(
 	seriesName string,
 	start time.Time,
 ) (schema.Series, error) {

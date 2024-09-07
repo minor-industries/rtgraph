@@ -32,7 +32,7 @@ func printKeys(jsObject js.Value) {
 	}
 }
 
-func (dmw *DatabaseManagerWrapper) LoadDataWindow(seriesName string, start time.Time) (schema.Series, error) {
+func (dmw *DatabaseManagerWrapper) LoadDataAfter(seriesName string, start time.Time) (schema.Series, error) {
 	promise := dmw.dbManager.Call("loadDataWindow", seriesName, start.UnixMilli())
 
 	dbResult := await(promise)
@@ -61,9 +61,9 @@ func (dmw *DatabaseManagerWrapper) LoadDataWindow(seriesName string, start time.
 	return result, nil
 }
 
-func (dmw *DatabaseManagerWrapper) LoadDate(seriesName string, date string) (schema.Series, error) {
+func (dmw *DatabaseManagerWrapper) LoadDataBetween(seriesName string, start, end time.Time) (schema.Series, error) {
 	// Implement based on the structure of the DatabaseManager
-	return schema.Series{}, fmt.Errorf("LoadDate is not implemented")
+	return schema.Series{}, fmt.Errorf("LoadDataBetween is not implemented")
 }
 
 func (dmw *DatabaseManagerWrapper) CreateSeries(seriesNames []string) error {

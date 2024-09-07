@@ -51,14 +51,20 @@ func (sub *Subscription) getInitialData(
 		var window schema.Series
 		var err error
 		if sub.req.Date != "" {
-			window, err = db.LoadDate(sub.inputSeries[idx], sub.req.Date)
+			// TODO: should this handle more cases than just local time?
+			t0, err := time.ParseInLocation("2006-01-02", sub.req.Date, time.Local)
+			if err != nil {
+				return nil, errors.Wrap(err, "parse date")
+			}
+			t1 := t0.AddDate(0, 0, 1)
+			window, err = db.LoadDataBetween(sub.inputSeries[idx], t0, t1)
 		} else {
 			var lookback time.Duration = 0
 			if wo, ok := op.(computed_series.WindowedOperator); ok {
 				lookback = wo.Lookback()
 			}
 
-			window, err = db.LoadDataWindow(
+			window, err = db.LoadDataAfter(
 				sub.inputSeries[idx],
 				start.Add(-lookback),
 			)
