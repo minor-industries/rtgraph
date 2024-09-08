@@ -283,8 +283,7 @@ export class Graph {
     }
 
     private connect() {
-        const ws = new WSConnector();
-        ws.connect(this);
+        this.connector.connect(this);
     }
 }
 

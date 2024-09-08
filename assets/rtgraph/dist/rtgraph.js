@@ -9255,8 +9255,7 @@ var Graph = class {
     this.elem.classList.add("rtgraph-disconnected");
   }
   connect() {
-    const ws = new WSConnector();
-    ws.connect(this);
+    this.connector.connect(this);
   }
 };
 
