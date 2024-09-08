@@ -3,28 +3,26 @@ import {decode} from "@msgpack/msgpack";
 
 export class WSConnector implements Connector {
     private readonly url: string
-    private handler?: Handler;
 
     constructor() {
         this.url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
     }
 
     connect(handler: Handler): void {
-        this.handler = handler;
-        this.connectInternal();
+        this.connectInternal(handler);
     }
 
-    private connectInternal() {
+    private connectInternal(handler: Handler) {
         const ws = new WebSocket(this.url);
         ws.binaryType = "arraybuffer";
         ws.onmessage = message => {
             const msg: Msg = decode(new Uint8Array(message.data)) as Msg;
-            this.handler!.onmessage(msg);
+            handler.onmessage(msg);
         }
 
         ws.onopen = event => {
             setTimeout(() => {
-                ws.send(JSON.stringify(this.handler!.subscriptionRequest()));
+                ws.send(JSON.stringify(handler.subscriptionRequest()));
             })
         }
 
@@ -33,8 +31,8 @@ export class WSConnector implements Connector {
         }
 
         ws.onclose = err => {
-            this.handler!.onclose();
-            setTimeout(() => this.connectInternal(), 1000);
+            handler.onclose();
+            setTimeout(() => this.connectInternal(handler), 1000);
         }
     }
 }

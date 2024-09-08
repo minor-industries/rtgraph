@@ -9050,27 +9050,26 @@ var WSConnector = class {
     this.url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
   }
   connect(handler2) {
-    this.handler = handler2;
-    this.connectInternal();
+    this.connectInternal(handler2);
   }
-  connectInternal() {
+  connectInternal(handler2) {
     const ws = new WebSocket(this.url);
     ws.binaryType = "arraybuffer";
     ws.onmessage = (message) => {
       const msg = decode(new Uint8Array(message.data));
-      this.handler.onmessage(msg);
+      handler2.onmessage(msg);
     };
     ws.onopen = (event) => {
       setTimeout(() => {
-        ws.send(JSON.stringify(this.handler.subscriptionRequest()));
+        ws.send(JSON.stringify(handler2.subscriptionRequest()));
       });
     };
     ws.onerror = (err) => {
       ws.close();
     };
     ws.onclose = (err) => {
-      this.handler.onclose();
-      setTimeout(() => this.connectInternal(), 1e3);
+      handler2.onclose();
+      setTimeout(() => this.connectInternal(handler2), 1e3);
     };
   }
 };
