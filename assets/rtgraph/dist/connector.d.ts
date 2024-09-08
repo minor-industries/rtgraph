@@ -10,6 +10,6 @@ export type Handler = {
     onclose(): void;
     subscriptionRequest(): SubscriptionRequest;
 };
-export type Connection = {
+export type Connector = {
     connect(handler: Handler): void;
 };

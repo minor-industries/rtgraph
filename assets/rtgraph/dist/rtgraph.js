@@ -9095,8 +9095,10 @@ var Graph = class {
     this.windowSize = this.opts.windowSize;
     this.t0Server = void 0;
     this.t0Client = void 0;
-    if (this.opts.connect === void 0) {
-      this.opts.connect = true;
+    if (this.opts.connector === void 0) {
+      this.connector = new WSConnector();
+    } else {
+      this.connector = this.opts.connector;
     }
     const labels = ["x"];
     for (let i = 0; i < this.numSeries; i++) {
@@ -9104,11 +9106,7 @@ var Graph = class {
     }
     this.labels = labels;
     this.dygraph = this.makeGraph();
-    if (this.opts.connect) {
-      this.connect();
-    } else {
-      this.setDate(/* @__PURE__ */ new Date());
-    }
+    this.connect();
   }
   onDraw(g) {
     if (!this.opts.drawCallback) {

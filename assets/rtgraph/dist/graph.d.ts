@@ -1,6 +1,6 @@
 import { Series } from "./combine.js";
 import Dygraph from 'dygraphs';
-import { Msg } from "./connector.js";
+import { Connector, Msg } from "./connector.js";
 export type DrawCallbackArgs = {
     lo: number;
     hi: number;
@@ -23,7 +23,7 @@ export type GraphOptions = {
     disableScroll?: boolean;
     date: string | null;
     drawCallback?: (args: DrawCallbackArgs) => void;
-    connect?: boolean;
+    connector?: Connector;
 };
 export type SubscriptionRequest = {
     series: string[];
@@ -41,6 +41,7 @@ export declare class Graph {
     private readonly labels;
     private t0Server;
     private t0Client;
+    private connector;
     constructor(elem: HTMLElement, opts: GraphOptions);
     private onDraw;
     private makeGraph;

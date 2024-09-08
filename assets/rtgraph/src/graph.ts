@@ -1,7 +1,7 @@
 import {Cache, Series} from "./combine.js"
 import Dygraph from 'dygraphs';
 import {binarySearch} from "./binary_search.js";
-import {Msg} from "./connector.js";
+import {Connector, Msg} from "./connector.js";
 import {WSConnector} from "./ws.js";
 
 
@@ -41,7 +41,7 @@ export type GraphOptions = {
     disableScroll?: boolean;
     date: string | null;
     drawCallback?: (args: DrawCallbackArgs) => void;
-    connect?: boolean;
+    connector?: Connector;
 };
 
 export type SubscriptionRequest = {
@@ -61,6 +61,7 @@ export class Graph {
     private readonly labels: string[];
     private t0Server: Date | undefined;
     private t0Client: Date | undefined;
+    private connector: Connector;
 
     constructor(
         elem: HTMLElement,
@@ -80,8 +81,10 @@ export class Graph {
         this.t0Server = undefined;
         this.t0Client = undefined;
 
-        if (this.opts.connect === undefined) {
-            this.opts.connect = true;
+        if (this.opts.connector === undefined) {
+            this.connector = new WSConnector();
+        } else {
+            this.connector = this.opts.connector
         }
 
         const labels: string[] = ["x"];
@@ -91,11 +94,7 @@ export class Graph {
         this.labels = labels;
 
         this.dygraph = this.makeGraph();
-        if (this.opts.connect) {
-            this.connect();
-        } else {
-            this.setDate(new Date());
-        }
+        this.connect();
     }
 
     private onDraw(g: typeof Dygraph) {

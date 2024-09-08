@@ -23,8 +23,11 @@ export class Graph {
         this.windowSize = this.opts.windowSize;
         this.t0Server = undefined;
         this.t0Client = undefined;
-        if (this.opts.connect === undefined) {
-            this.opts.connect = true;
+        if (this.opts.connector === undefined) {
+            this.connector = new WSConnector();
+        }
+        else {
+            this.connector = this.opts.connector;
         }
         const labels = ["x"];
         for (let i = 0; i < this.numSeries; i++) {
@@ -32,12 +35,7 @@ export class Graph {
         }
         this.labels = labels;
         this.dygraph = this.makeGraph();
-        if (this.opts.connect) {
-            this.connect();
-        }
-        else {
-            this.setDate(new Date());
-        }
+        this.connect();
     }
     onDraw(g) {
         if (!this.opts.drawCallback) {
