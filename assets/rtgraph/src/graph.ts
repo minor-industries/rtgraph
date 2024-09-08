@@ -1,8 +1,8 @@
 import {Cache, Series} from "./combine.js"
 import Dygraph from 'dygraphs';
 import {binarySearch} from "./binary_search.js";
-import {Msg} from "./connection.js";
-import {WSConn} from "./ws.js";
+import {Msg} from "./connector.js";
+import {WSConnector} from "./ws.js";
 
 
 function supplant(s: string, o: any) {
@@ -284,7 +284,7 @@ export class Graph {
     }
 
     private connect() {
-        const ws = new WSConn();
+        const ws = new WSConnector();
         ws.connect(this);
     }
 }

@@ -1,5 +1,5 @@
-import { Connection, Handler } from "./connection.js";
-export declare class WSConn implements Connection {
+import { Connector, Handler } from "./connector.js";
+export declare class WSConnector implements Connector {
     private readonly url;
     private handler?;
     constructor();

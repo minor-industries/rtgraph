@@ -1,5 +1,5 @@
 import { decode } from "@msgpack/msgpack";
-export class WSConn {
+export class WSConnector {
     constructor() {
         this.url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
     }

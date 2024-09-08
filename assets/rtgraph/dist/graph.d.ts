@@ -1,6 +1,6 @@
 import { Series } from "./combine.js";
 import Dygraph from 'dygraphs';
-import { Msg } from "./connection.js";
+import { Msg } from "./connector.js";
 export type DrawCallbackArgs = {
     lo: number;
     hi: number;

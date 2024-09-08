@@ -1,7 +1,7 @@
-import {Connection, Handler, Msg} from "./connection.js";
+import {Connector, Handler, Msg} from "./connector.js";
 import {decode} from "@msgpack/msgpack";
 
-export class WSConn implements Connection {
+export class WSConnector implements Connector {
     private readonly url: string
     private handler?: Handler;
 

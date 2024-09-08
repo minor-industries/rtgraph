@@ -1,7 +1,7 @@
 import { Cache } from "./combine.js";
 import Dygraph from 'dygraphs';
 import { binarySearch } from "./binary_search.js";
-import { WSConn } from "./ws.js";
+import { WSConnector } from "./ws.js";
 function supplant(s, o) {
     // https://stackoverflow.com/questions/1408289/how-can-i-do-string-interpolation-in-javascript
     return s.replace(/{([^{}]*)}/g, function (a, b) {
@@ -190,7 +190,7 @@ export class Graph {
         this.elem.classList.add("rtgraph-disconnected");
     }
     connect() {
-        const ws = new WSConn();
+        const ws = new WSConnector();
         ws.connect(this);
     }
 }

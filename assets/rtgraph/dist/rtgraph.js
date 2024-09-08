@@ -9045,7 +9045,7 @@ function decode(buffer, options) {
 }
 
 // dist/ws.js
-var WSConn = class {
+var WSConnector = class {
   constructor() {
     this.url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
   }
@@ -9257,7 +9257,7 @@ var Graph = class {
     this.elem.classList.add("rtgraph-disconnected");
   }
   connect() {
-    const ws = new WSConn();
+    const ws = new WSConnector();
     ws.connect(this);
   }
 };
