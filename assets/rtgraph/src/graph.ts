@@ -1,7 +1,8 @@
 import {Cache, Series} from "./combine.js"
 import Dygraph from 'dygraphs';
-import {decode} from '@msgpack/msgpack'
 import {binarySearch} from "./binary_search.js";
+import {Msg} from "./connection.js";
+import {WSConn} from "./ws.js";
 
 
 function supplant(s: string, o: any) {
@@ -260,57 +261,31 @@ export class Graph {
         }
     }
 
-    private connect() {
-        const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
-        const ws = new WebSocket(url);
-        ws.binaryType = "arraybuffer";
+    onmessage(msg: Msg) {
+        this.elem.classList.remove("rtgraph-disconnected");
 
-        type Msg = {
-            error?: string;
-            now?: number;
-            rows?: Series[];
-        };
-
-        ws.onmessage = message => {
-            this.elem.classList.remove("rtgraph-disconnected");
-            if (message.data instanceof ArrayBuffer) {
-                const msg: Msg = decode(new Uint8Array(message.data)) as Msg;
-
-                if (msg.error !== undefined) {
-                    alert(msg.error);
-                    return;
-                }
-
-                if (msg.now !== undefined) {
-                    // handle case when client and server times don't match
-                    this.setDate(new Date(msg.now));
-                }
-
-                if (msg.rows !== undefined) {
-                    this.update(msg.rows);
-                }
-            }
-        };
-
-        ws.onopen = event => {
-            setTimeout(() => {
-                let lastPointMs = this.getLastTimestamp();
-                ws.send(JSON.stringify(this.subscriptionRequest()));
-            })
+        if (msg.error !== undefined) {
+            alert(msg.error);
+            return;
         }
 
-        ws.onerror = err => {
-            ws.close();
+        if (msg.now !== undefined) {
+            // handle case when client and server times don't match
+            this.setDate(new Date(msg.now));
         }
 
-        ws.onclose = err => {
-            this.elem.classList.add("rtgraph-disconnected");
-            this.reconnect();
+        if (msg.rows !== undefined) {
+            this.update(msg.rows);
         }
     }
 
-    private reconnect() {
-        setTimeout(() => this.connect(), 1000);
+    onclose() {
+        this.elem.classList.add("rtgraph-disconnected");
+    }
+
+    private connect() {
+        const ws = new WSConn();
+        ws.connect(this);
     }
 }
 

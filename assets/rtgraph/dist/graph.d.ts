@@ -1,5 +1,6 @@
 import { Series } from "./combine.js";
 import Dygraph from 'dygraphs';
+import { Msg } from "./connection.js";
 export type DrawCallbackArgs = {
     lo: number;
     hi: number;
@@ -51,6 +52,7 @@ export declare class Graph {
     private scroll;
     private getLastTimestamp;
     subscriptionRequest(): SubscriptionRequest;
+    onmessage(msg: Msg): void;
+    onclose(): void;
     private connect;
-    private reconnect;
 }

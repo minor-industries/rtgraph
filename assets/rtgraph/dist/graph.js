@@ -1,7 +1,7 @@
 import { Cache } from "./combine.js";
 import Dygraph from 'dygraphs';
-import { decode } from '@msgpack/msgpack';
 import { binarySearch } from "./binary_search.js";
+import { WSConn } from "./ws.js";
 function supplant(s, o) {
     // https://stackoverflow.com/questions/1408289/how-can-i-do-string-interpolation-in-javascript
     return s.replace(/{([^{}]*)}/g, function (a, b) {
@@ -172,42 +172,25 @@ export class Graph {
             date: this.opts.date
         };
     }
-    connect() {
-        const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
-        const ws = new WebSocket(url);
-        ws.binaryType = "arraybuffer";
-        ws.onmessage = message => {
-            this.elem.classList.remove("rtgraph-disconnected");
-            if (message.data instanceof ArrayBuffer) {
-                const msg = decode(new Uint8Array(message.data));
-                if (msg.error !== undefined) {
-                    alert(msg.error);
-                    return;
-                }
-                if (msg.now !== undefined) {
-                    // handle case when client and server times don't match
-                    this.setDate(new Date(msg.now));
-                }
-                if (msg.rows !== undefined) {
-                    this.update(msg.rows);
-                }
-            }
-        };
-        ws.onopen = event => {
-            setTimeout(() => {
-                let lastPointMs = this.getLastTimestamp();
-                ws.send(JSON.stringify(this.subscriptionRequest()));
-            });
-        };
-        ws.onerror = err => {
-            ws.close();
-        };
-        ws.onclose = err => {
-            this.elem.classList.add("rtgraph-disconnected");
-            this.reconnect();
-        };
+    onmessage(msg) {
+        this.elem.classList.remove("rtgraph-disconnected");
+        if (msg.error !== undefined) {
+            alert(msg.error);
+            return;
+        }
+        if (msg.now !== undefined) {
+            // handle case when client and server times don't match
+            this.setDate(new Date(msg.now));
+        }
+        if (msg.rows !== undefined) {
+            this.update(msg.rows);
+        }
     }
-    reconnect() {
-        setTimeout(() => this.connect(), 1000);
+    onclose() {
+        this.elem.classList.add("rtgraph-disconnected");
+    }
+    connect() {
+        const ws = new WSConn();
+        ws.connect(this);
     }
 }

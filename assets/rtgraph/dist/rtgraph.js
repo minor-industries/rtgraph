@@ -9044,6 +9044,37 @@ function decode(buffer, options) {
   return decoder.decode(buffer);
 }
 
+// dist/ws.js
+var WSConn = class {
+  constructor() {
+    this.url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
+  }
+  connect(handler2) {
+    this.handler = handler2;
+    this.connectInternal();
+  }
+  connectInternal() {
+    const ws = new WebSocket(this.url);
+    ws.binaryType = "arraybuffer";
+    ws.onmessage = (message) => {
+      const msg = decode(new Uint8Array(message.data));
+      this.handler.onmessage(msg);
+    };
+    ws.onopen = (event) => {
+      setTimeout(() => {
+        ws.send(JSON.stringify(this.handler.subscriptionRequest()));
+      });
+    };
+    ws.onerror = (err) => {
+      ws.close();
+    };
+    ws.onclose = (err) => {
+      this.handler.onclose();
+      setTimeout(() => this.connectInternal(), 1e3);
+    };
+  }
+};
+
 // dist/graph.js
 function supplant(s, o) {
   return s.replace(/{([^{}]*)}/g, function(a, b) {
@@ -9200,49 +9231,34 @@ var Graph = class {
     const lastPoint = data[data.length - 1];
     return lastPoint[0].getTime();
   }
-  connect() {
-    const url = `ws://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
-    const ws = new WebSocket(url);
-    ws.binaryType = "arraybuffer";
-    ws.onmessage = (message) => {
-      this.elem.classList.remove("rtgraph-disconnected");
-      if (message.data instanceof ArrayBuffer) {
-        const msg = decode(new Uint8Array(message.data));
-        if (msg.error !== void 0) {
-          alert(msg.error);
-          return;
-        }
-        if (msg.now !== void 0) {
-          this.setDate(new Date(msg.now));
-        }
-        if (msg.rows !== void 0) {
-          this.update(msg.rows);
-        }
-      }
-    };
-    ws.onopen = (event) => {
-      setTimeout(() => {
-        let lastPointMs = this.getLastTimestamp();
-        ws.send(JSON.stringify({
-          series: this.opts.seriesNames,
-          windowSize: this.windowSize || 0,
-          lastPointMs,
-          maxGapMs: this.opts.maxGapMs || 60 * 1e3,
-          // 60 seconds in ms
-          date: this.opts.date
-        }));
-      });
-    };
-    ws.onerror = (err) => {
-      ws.close();
-    };
-    ws.onclose = (err) => {
-      this.elem.classList.add("rtgraph-disconnected");
-      this.reconnect();
+  subscriptionRequest() {
+    let lastPointMs = this.getLastTimestamp();
+    return {
+      series: this.opts.seriesNames,
+      windowSize: this.windowSize || 0,
+      lastPointMs,
+      date: this.opts.date
     };
   }
-  reconnect() {
-    setTimeout(() => this.connect(), 1e3);
+  onmessage(msg) {
+    this.elem.classList.remove("rtgraph-disconnected");
+    if (msg.error !== void 0) {
+      alert(msg.error);
+      return;
+    }
+    if (msg.now !== void 0) {
+      this.setDate(new Date(msg.now));
+    }
+    if (msg.rows !== void 0) {
+      this.update(msg.rows);
+    }
+  }
+  onclose() {
+    this.elem.classList.add("rtgraph-disconnected");
+  }
+  connect() {
+    const ws = new WSConn();
+    ws.connect(this);
   }
 };
 
