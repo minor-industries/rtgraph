@@ -55,6 +55,15 @@ type Backend struct {
 	seen    set.Set[string]
 }
 
+func (b *Backend) AllSeriesNames() ([]string, error) {
+	var result []string
+	tx := b.db.Model(&Series{}).Distinct("name").Pluck("name", &result)
+	if tx.Error != nil {
+		return nil, errors.Wrap(tx.Error, "get distinct series names")
+	}
+	return result, nil
+}
+
 func (b *Backend) GetORM() *gorm.DB {
 	return b.db
 }

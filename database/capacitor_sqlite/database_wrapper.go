@@ -99,6 +99,26 @@ func (dmw *DatabaseManagerWrapper) InsertValue(seriesName string, timestamp time
 	return nil
 }
 
+func (dmw *DatabaseManagerWrapper) AllSeriesNames() ([]string, error) {
+	promise := dmw.dbManager.Call("allSeriesNames")
+	var result []string
+
+	dbResult := await(promise)
+
+	if dbResult.IsUndefined() {
+		return nil, fmt.Errorf("result is undefined")
+	}
+
+	result = make([]string, dbResult.Length())
+
+	for i := 0; i < dbResult.Length(); i++ {
+		row := dbResult.Index(i)
+		result[i] = row.String()
+	}
+
+	return result, nil
+}
+
 // await converts a JavaScript Promise into a synchronous call for Go
 func await(promise js.Value) js.Value {
 	done := make(chan struct{})

@@ -21,6 +21,8 @@ type StorageBackend interface {
 		seriesNames []string,
 	) error
 
+	AllSeriesNames() ([]string, error)
+
 	InsertValue(
 		seriesName string,
 		timestamp time.Time,
