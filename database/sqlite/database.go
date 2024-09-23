@@ -3,7 +3,6 @@
 package sqlite
 
 import (
-	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/glebarez/sqlite"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/pkg/errors"
@@ -52,7 +51,6 @@ type Backend struct {
 	db *gorm.DB
 
 	objects chan object
-	seen    set.Set[string]
 }
 
 func (b *Backend) AllSeriesNames() ([]string, error) {
@@ -69,10 +67,12 @@ func (b *Backend) GetORM() *gorm.DB {
 }
 
 func (b *Backend) InsertValue(seriesName string, timestamp time.Time, value float64) error {
-	if !b.seen.Has(seriesName) {
-		//fmt.Println("series", strings.ToUpper(hex.EncodeToString(HashedID(seriesName))), seriesName)
-		b.seen.Add(seriesName)
-	}
+	// We may want to cache known series names so that we're not constantly trying to write these,
+	// then again, this shouldn't cause multiple actual writes due to our on conflict clause.
+	b.Insert(&Series{
+		ID:   HashedID(seriesName),
+		Name: seriesName,
+	})
 
 	b.Insert(&Sample{
 		SeriesID:  HashedID(seriesName),
@@ -89,7 +89,6 @@ func NewBackend(
 	b := &Backend{
 		db:      db,
 		objects: make(chan object, bufSize),
-		seen:    set.FromSlice([]string{}),
 	}
 
 	return b
