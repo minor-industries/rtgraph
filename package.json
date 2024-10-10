@@ -1,6 +1,6 @@
 {
   "name": "rtgraph",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "description": "Realtime time-series graphs in the browser",
   "type": "module",
   "main": "assets/rtgraph/dist/index.js",
