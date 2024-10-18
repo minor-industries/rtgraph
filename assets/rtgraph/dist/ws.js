@@ -1,8 +1,7 @@
 import { decode } from "@msgpack/msgpack";
 export class WSConnector {
     constructor() {
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        this.url = `${protocol}://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
+        this.url = '/rtgraph/ws';
     }
     connect(handler) {
         this.connectInternal(handler);

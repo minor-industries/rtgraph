@@ -9047,8 +9047,7 @@ function decode(buffer, options) {
 // dist/ws.js
 var WSConnector = class {
   constructor() {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    this.url = `${protocol}://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
+    this.url = "/rtgraph/ws";
   }
   connect(handler2) {
     this.connectInternal(handler2);

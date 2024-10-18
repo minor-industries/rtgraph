@@ -5,8 +5,7 @@ export class WSConnector implements Connector {
     private readonly url: string
 
     constructor() {
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        this.url = `${protocol}://${window.location.hostname}:${window.location.port}/rtgraph/ws`;
+        this.url = '/rtgraph/ws';
     }
 
     connect(handler: Handler): void {
