@@ -7,7 +7,7 @@ import (
 	"github.com/minor-industries/rtgraph/messages"
 	"github.com/minor-industries/rtgraph/schema"
 	"github.com/minor-industries/rtgraph/storage"
-	subscription "github.com/minor-industries/rtgraph/subscription"
+	"github.com/minor-industries/rtgraph/subscription"
 	"github.com/pkg/errors"
 	"time"
 )
@@ -29,13 +29,7 @@ func New(
 	backend storage.StorageBackend,
 	errCh chan error,
 	opts Opts,
-	seriesNames []string,
 ) (*Graph, error) {
-	err := backend.CreateSeries(seriesNames)
-	if err != nil {
-		return nil, errors.Wrap(err, "load series")
-	}
-
 	br := broker.NewBroker()
 
 	g := &Graph{

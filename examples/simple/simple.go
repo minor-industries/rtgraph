@@ -44,10 +44,6 @@ func run() error {
 		rtgraph.Opts{
 			ExternalMetrics: prom.PublishPrometheusMetrics,
 		},
-		[]string{
-			"sample1",
-			"sample2",
-		},
 	)
 	if err != nil {
 		return errors.Wrap(err, "new graph")
